@@ -1,10 +1,10 @@
 #pragma once
 
-#include <QDialog>
+#include <QWidget>
 
 #include "ui_MainWindow.h"
 
-class MainWindow : public QDialog {
+class MainWindow : public QWidget {
     Q_OBJECT;
 
 public:
