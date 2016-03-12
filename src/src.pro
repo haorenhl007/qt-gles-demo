@@ -5,11 +5,11 @@ QT += widgets
 
 include(src.pri)
 
-FORMS += $$PWD/MainWindow.ui
+FORMS += MainWindow.ui
 
-HEADERS += $$PWD/GlWidget.h
-HEADERS += $$PWD/MainWindow.h
+HEADERS += GlWidget.h
+HEADERS += MainWindow.h
 
-SOURCES += $$PWD/GlWidget.cpp
-SOURCES += $$PWD/main.cpp
-SOURCES += $$PWD/MainWindow.cpp
+SOURCES += GlWidget.cpp
+SOURCES += main.cpp
+SOURCES += MainWindow.cpp

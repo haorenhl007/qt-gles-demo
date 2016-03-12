@@ -8,7 +8,7 @@ QT += testlib
 include(../src/src.pri)
 INCLUDEPATH += ../src
 
-HEADERS += SampleTest.h
+HEADERS += Ply/PlyModelTest.h
 
 SOURCES += main.cpp
-SOURCES += SampleTest.cpp
+SOURCES += Ply/PlyModelTest.cpp

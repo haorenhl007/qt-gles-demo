@@ -1,6 +1,6 @@
 #include <QTest>
 
-#include "SampleTest.h"
+#include "Ply/PlyModelTest.h"
 
 int main()
 {
@@ -10,7 +10,7 @@ int main()
         delete test_p;
     };
 
-    runTest(new SampleTest());
+    runTest(new PlyModelTest());
 
     return result;
 }
