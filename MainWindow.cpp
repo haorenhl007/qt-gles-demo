@@ -1,8 +1,23 @@
 #include "MainWindow.h"
 
-MainWindow::MainWindow() {
+MainWindow::MainWindow()
+{
     ui.setupUi( this );
+    ui.buttonInstall->click();
 }
 
-MainWindow::~MainWindow() {
+MainWindow::~MainWindow()
+{
+}
+
+void MainWindow::on_buttonInstall_clicked()
+{
+    const QString vertexSource = ui.textVertex->toPlainText();
+    const QString fragmentSource = ui.textFragment->toPlainText();
+    ui.glWidget->installShaders(vertexSource, fragmentSource);
+}
+
+void MainWindow::on_glWidget_notify(const QString& text)
+{
+    ui.textResult->setPlainText(text);
 }
