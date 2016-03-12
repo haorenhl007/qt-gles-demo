@@ -33,4 +33,7 @@ private:
     QString m_vertexSource;
     QString m_fragmentSource;
     bool m_shadersChanged;
+
+    int m_uMvp;
+    int m_aPos;
 };
