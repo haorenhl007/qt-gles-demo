@@ -41,6 +41,9 @@ private:
     QString m_fragmentSource;
     bool m_shadersChanged;
 
-    int m_uMvp;
-    int m_aPos;
+    int m_uModel;
+    int m_uView;
+    int m_uProjection;
+    int m_aPosition;
+    int m_aNormal;
 };

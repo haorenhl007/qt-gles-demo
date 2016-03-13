@@ -89,10 +89,15 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_modelVertexCount(0),
         m_program_p(nullptr),
         m_shadersChanged(false),
-        m_uMvp(-1),
-        m_aPos(-1)
+        m_uModel(-1),
+        m_uView(-1),
+        m_uProjection(-1),
+        m_aPosition(-1),
+        m_aNormal(-1)
 {
-    // TODO: Set the QSurfaceFormat here.
+    QSurfaceFormat f = format();
+    f.setDepthBufferSize(24);
+    setFormat(f);
 }
 
 //=============================================================================
@@ -143,13 +148,22 @@ void GlWidget::initializeGL()
     if(m_shadersChanged) buildShaders();
 
     glClearColor(1.0, 0.0, 0.0, 1.0);
+
+    glEnable(GL_DEPTH_TEST);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 }
 
 //=============================================================================
 void GlWidget::resizeGL(int w, int h)
 {
     m_projectionMatrix = QMatrix4x4();
-    m_projectionMatrix.perspective(60, w/(float)h, 0.0f, 1000.0f);
+    m_projectionMatrix.perspective(60, w/(float)h, 0.01f, 100.0f);
 }
 
 //=============================================================================
@@ -159,7 +173,7 @@ void GlWidget::paintGL()
     if(!m_program_p) return;
     m_program_p->bind();
 
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // TODO: Let user control camera.
     QVector3D eye(20, 18, 10);
@@ -171,16 +185,25 @@ void GlWidget::paintGL()
     // TODO: Let user reposition model.
     QMatrix4x4 modelMatrix;
 
-    // TODO: Combine model, view, and projection in the vertex shader.
-    QMatrix4x4 mvp = m_projectionMatrix * viewMatrix * modelMatrix;
-    m_program_p->setUniformValue(m_uMvp, mvp);
+    m_program_p->setUniformValue(m_uModel, modelMatrix);
+    m_program_p->setUniformValue(m_uView, viewMatrix);
+    m_program_p->setUniformValue(m_uProjection, m_projectionMatrix);
 
     if(m_modelData_p) {
         glVertexAttribPointer(
-                m_aPos, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p);
-        glEnableVertexAttribArray(m_aPos);
+                m_aPosition, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p);
+        glEnableVertexAttribArray(m_aPosition);
+
+        if(m_aNormal >= 0) {
+            glVertexAttribPointer(
+                    m_aNormal, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p+3);
+            glEnableVertexAttribArray(m_aNormal);
+        }
+
         glDrawArrays(GL_TRIANGLES, 0, m_modelVertexCount);
-        glDisableVertexAttribArray(m_aPos);
+
+        if(m_aNormal >= 0) glDisableVertexAttribArray(m_aNormal);
+        glDisableVertexAttribArray(m_aPosition);
     }
 
     m_program_p->release();
@@ -221,6 +244,9 @@ void GlWidget::buildShaders()
     m_program_p = program_p;
     emit notify("Shader program built successfully!");
 
-    m_uMvp = m_program_p->uniformLocation("uMvp");
-    m_aPos = m_program_p->attributeLocation("aPos");
+    m_uModel = m_program_p->uniformLocation("uModel");
+    m_uView = m_program_p->uniformLocation("uView");
+    m_uProjection = m_program_p->uniformLocation("uProjection");
+    m_aPosition = m_program_p->attributeLocation("aPosition");
+    m_aNormal = m_program_p->attributeLocation("aNormal");
 }
