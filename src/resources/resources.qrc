@@ -1,0 +1,7 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>chicken-normal.png</file>
+    <file>chicken-texture.png</file>
+    <file>chicken.ply</file>
+</qresource>
+</RCC>

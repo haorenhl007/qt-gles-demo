@@ -4,6 +4,7 @@ MainWindow::MainWindow()
 {
     ui.setupUi( this );
     ui.buttonInstall->click();
+    ui.glWidget->setModel(":/chicken.ply");
 }
 
 MainWindow::~MainWindow()

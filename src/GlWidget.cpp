@@ -1,9 +1,92 @@
 #include "GlWidget.h"
 
+#include <QFile>
 #include <QOpenGLShaderProgram>
+
+#include "Ply/PlyModel.h"
+
+constexpr int numVertexValues = 8;
+constexpr int stride = numVertexValues * sizeof(GLfloat);
+
+//=============================================================================
+static GLfloat *convertPly(PlyModel model, int *vertexCountOut)
+{
+    struct Vertex
+    {
+        double x;
+        double y;
+        double z;
+        double nx;
+        double ny;
+        double nz;
+        double s;
+        double t;
+    };
+
+    QSet<QString> elements = model.elements();
+    if(!elements.contains("vertex")) return nullptr;
+    if(!elements.contains("face")) return nullptr;
+
+    QSet<QString> vertexProperties = model.scalarProperties("vertex");
+    if(!vertexProperties.contains("x")) return nullptr;
+    if(!vertexProperties.contains("y")) return nullptr;
+    if(!vertexProperties.contains("z")) return nullptr;
+    if(!vertexProperties.contains("nx")) return nullptr;
+    if(!vertexProperties.contains("ny")) return nullptr;
+    if(!vertexProperties.contains("nz")) return nullptr;
+    if(!vertexProperties.contains("s")) return nullptr;
+    if(!vertexProperties.contains("t")) return nullptr;
+
+    QSet<QString> faceProperties = model.listProperties("face");
+    if(!faceProperties.contains("vertex_indices")) return nullptr;
+
+    QList<Vertex> verts;
+    const int vertexCount = model.count("vertex");
+    for(int v = 0; v < vertexCount; ++v) {
+        Vertex vert;
+        vert.x = model.scalarValue("vertex", v, "x");
+        vert.y = model.scalarValue("vertex", v, "y");
+        vert.z = model.scalarValue("vertex", v, "z");
+        vert.nx = model.scalarValue("vertex", v, "nx");
+        vert.ny = model.scalarValue("vertex", v, "ny");
+        vert.nz = model.scalarValue("vertex", v, "nz");
+        vert.s = model.scalarValue("vertex", v, "s");
+        vert.t = model.scalarValue("vertex", v, "t");
+        verts.append(vert);
+    }
+
+    QList<double> face_verts;
+    const int faceCount = model.count("face");
+    for(int f = 0; f < faceCount; ++f) {
+        QList<double> indices = model.listValue("face", f, "vertex_indices");
+        if(indices.count() != 3) return nullptr;
+        for(int i = 0; i < indices.count(); ++i) {
+            int v = (int)indices.value(i);
+            if(v >= verts.count()) return nullptr;
+            Vertex vert = verts.value(v);
+            face_verts.append(vert.x);
+            face_verts.append(vert.y);
+            face_verts.append(vert.z);
+            face_verts.append(vert.nx);
+            face_verts.append(vert.ny);
+            face_verts.append(vert.nz);
+            face_verts.append(vert.s);
+            face_verts.append(vert.t);
+        }
+    }
+
+    GLfloat *data_p = new GLfloat[face_verts.count()];
+    for(int i = 0; i < face_verts.count(); ++i) {
+        data_p[i] = face_verts.value(i);
+    }
+    if(vertexCountOut) *vertexCountOut = face_verts.count() / numVertexValues;
+    return data_p;
+}
 
 //=============================================================================
 GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
+        m_modelData_p(nullptr),
+        m_modelVertexCount(0),
         m_program_p(nullptr),
         m_shadersChanged(false),
         m_uMvp(-1),
@@ -16,6 +99,27 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
 GlWidget::~GlWidget()
 {
     cleanup();
+    delete m_modelData_p;
+}
+
+//=============================================================================
+void GlWidget::setModel(const QString& modelPath)
+{
+    QFile file(modelPath);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // TODO: notify.
+        qDebug("Could not open file \"%s\"", modelPath.toUtf8().constData());
+        return;
+    }
+    QTextStream stream(&file);
+    PlyModel ply = PlyModel::parse(stream);
+    if(!ply.isValid()) {
+        // TODO: notify.
+        qDebug("Invalid PLY file \"%s\"", modelPath.toUtf8().constData());
+        return;
+    }
+    delete m_modelData_p;
+    m_modelData_p = convertPly(ply, &m_modelVertexCount);
 }
 
 //=============================================================================
@@ -39,16 +143,13 @@ void GlWidget::initializeGL()
     if(m_shadersChanged) buildShaders();
 
     glClearColor(1.0, 0.0, 0.0, 1.0);
-    // TODO
 }
 
 //=============================================================================
 void GlWidget::resizeGL(int w, int h)
 {
-    // NOTE: No GL calls in here!
-    // TODO: Recalculate the projection matrix.
-    (void)w;
-    (void)h;
+    m_projectionMatrix = QMatrix4x4();
+    m_projectionMatrix.perspective(60, w/(float)h, 0.0f, 1000.0f);
 }
 
 //=============================================================================
@@ -60,19 +161,27 @@ void GlWidget::paintGL()
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    QMatrix4x4 mvp;
+    // TODO: Let user control camera.
+    QVector3D eye(20, 18, 10);
+    QVector3D target(0, 0, 5);
+    QVector3D up(0, 0, 1);
+    QMatrix4x4 viewMatrix;
+    viewMatrix.lookAt(eye, target, up);
+
+    // TODO: Let user reposition model.
+    QMatrix4x4 modelMatrix;
+
+    // TODO: Combine model, view, and projection in the vertex shader.
+    QMatrix4x4 mvp = m_projectionMatrix * viewMatrix * modelMatrix;
     m_program_p->setUniformValue(m_uMvp, mvp);
 
-    // TODO: Draw dynamically loaded model.
-    GLfloat vertices[] = {
-         0.0f,  0.707f,
-        -0.5f, -0.5f,
-         0.5f, -0.5f
-    };
-    glVertexAttribPointer(m_aPos, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-    glEnableVertexAttribArray(m_aPos);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glDisableVertexAttribArray(m_aPos);
+    if(m_modelData_p) {
+        glVertexAttribPointer(
+                m_aPos, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p);
+        glEnableVertexAttribArray(m_aPos);
+        glDrawArrays(GL_TRIANGLES, 0, m_modelVertexCount);
+        glDisableVertexAttribArray(m_aPos);
+    }
 
     m_program_p->release();
 }

@@ -1,3 +1,4 @@
+#include <QMatrix4x4>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
 
@@ -11,6 +12,7 @@ public:
     GlWidget(QWidget *parent_p = nullptr);
     ~GlWidget() override;
 
+    void setModel(const QString& modelPath);
     void installShaders(const QString& vertexSource,
             const QString& fragmentSource);
 
@@ -27,6 +29,11 @@ private slots:
 
 private:
     void buildShaders();
+
+    QMatrix4x4 m_projectionMatrix;
+
+    GLfloat *m_modelData_p;
+    int m_modelVertexCount;
 
     QOpenGLShaderProgram *m_program_p;
 

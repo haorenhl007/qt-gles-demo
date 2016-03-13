@@ -5,6 +5,8 @@ QT += widgets
 
 include(src.pri)
 
+RESOURCES += resources/resources.qrc
+
 FORMS += MainWindow.ui
 
 HEADERS += GlWidget.h
