@@ -19,6 +19,11 @@ public:
 signals:
     void notify(const QString& text);
 
+public slots:
+    void enableFaceCulling(bool enable);
+    void enableDepthTesting(bool enable);
+    void enableFacetedRender(bool enable);
+
 protected:
     void initializeGL() override;
     void resizeGL(int w, int h) override;
@@ -31,6 +36,10 @@ private:
     void buildShaders();
 
     QMatrix4x4 m_projectionMatrix;
+
+    bool m_enableFaceCulling;
+    bool m_enableDepthTesting;
+    bool m_enableFacetedRender;
 
     GLfloat *m_modelData_p;
     int m_modelVertexCount;

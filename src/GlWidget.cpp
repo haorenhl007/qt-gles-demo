@@ -100,6 +100,9 @@ static GLfloat *convertPly(PlyModel model, int *vertexCountOut)
 
 //=============================================================================
 GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
+        m_enableFaceCulling(true),
+        m_enableDepthTesting(true),
+        m_enableFacetedRender(false),
         m_modelData_p(nullptr),
         m_modelVertexCount(0),
         m_program_p(nullptr),
@@ -152,6 +155,27 @@ void GlWidget::installShaders(const QString& vertexSource,
 }
 
 //=============================================================================
+void GlWidget::enableFaceCulling(bool enable)
+{
+    m_enableFaceCulling = enable;
+    update();
+}
+
+//=============================================================================
+void GlWidget::enableDepthTesting(bool enable)
+{
+    m_enableDepthTesting = enable;
+    update();
+}
+
+//=============================================================================
+void GlWidget::enableFacetedRender(bool enable)
+{
+    m_enableFacetedRender = enable;
+    update();
+}
+
+//=============================================================================
 void GlWidget::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -162,14 +186,8 @@ void GlWidget::initializeGL()
 
     glClearColor(1.0, 0.0, 0.0, 1.0);
 
-    glEnable(GL_DEPTH_TEST);
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
 }
 
 //=============================================================================
@@ -185,6 +203,20 @@ void GlWidget::paintGL()
     if(m_shadersChanged) buildShaders();
     if(!m_program_p) return;
     m_program_p->bind();
+
+    if(m_enableDepthTesting) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+
+    if(m_enableFaceCulling) {
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -208,8 +240,9 @@ void GlWidget::paintGL()
         glEnableVertexAttribArray(m_aPosition);
 
         if(m_aNormal >= 0) {
+            GLfloat *data_p = m_modelData_p + (m_enableFacetedRender ? 6 : 3);
             glVertexAttribPointer(
-                    m_aNormal, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p+6);
+                    m_aNormal, 3, GL_FLOAT, GL_FALSE, stride, data_p);
             glEnableVertexAttribArray(m_aNormal);
         }
 

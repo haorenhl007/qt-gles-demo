@@ -131,12 +131,18 @@ void main() {
          <property name="text">
           <string>Face culling</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
         <widget class="QCheckBox" name="checkDepthTesting">
          <property name="text">
           <string>Depth testing</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
