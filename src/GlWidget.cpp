@@ -2,6 +2,8 @@
 
 #include <QFile>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLTexture>
+#include <QRegularExpression>
 
 #include "Ply/PlyModel.h"
 
@@ -105,13 +107,17 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_enableFacetedRender(false),
         m_modelData_p(nullptr),
         m_modelVertexCount(0),
+        m_texture_p(nullptr),
+        m_modelChanged(false),
         m_program_p(nullptr),
         m_shadersChanged(false),
         m_uModel(-1),
         m_uView(-1),
         m_uProjection(-1),
+        m_uTexture(-1),
         m_aPosition(-1),
-        m_aNormal(-1)
+        m_aNormal(-1),
+        m_aTextureCoord(-1)
 {
     QSurfaceFormat f = format();
     f.setDepthBufferSize(24);
@@ -141,6 +147,15 @@ void GlWidget::setModel(const QString& modelPath)
     }
     delete m_modelData_p;
     m_modelData_p = convertPly(ply, &m_modelVertexCount);
+
+    QString texturePath = modelPath;
+    (void)texturePath.replace(QRegularExpression("\\.[Pp][Ll][Yy]$"),
+            "-texture.png");
+    m_textureData = QImage(texturePath);
+
+    // TODO: Attempt to load normal map.
+
+    m_modelChanged = true;
 }
 
 //=============================================================================
@@ -201,6 +216,7 @@ void GlWidget::resizeGL(int w, int h)
 void GlWidget::paintGL()
 {
     if(m_shadersChanged) buildShaders();
+    if(m_modelChanged) prepareModel();
     if(!m_program_p) return;
     m_program_p->bind();
 
@@ -234,6 +250,12 @@ void GlWidget::paintGL()
     m_program_p->setUniformValue(m_uView, viewMatrix);
     m_program_p->setUniformValue(m_uProjection, m_projectionMatrix);
 
+    if(m_texture_p && m_uTexture >= 0) {
+        constexpr int textureUnit = 0;
+        m_texture_p->bind(textureUnit);
+        glUniform1i(m_uTexture, textureUnit);
+    }
+
     if(m_modelData_p) {
         glVertexAttribPointer(
                 m_aPosition, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p);
@@ -246,8 +268,16 @@ void GlWidget::paintGL()
             glEnableVertexAttribArray(m_aNormal);
         }
 
+        if(m_aTextureCoord >= 0) {
+            glVertexAttribPointer(
+                    m_aTextureCoord, 2, GL_FLOAT, GL_FALSE, stride,
+                    m_modelData_p+9);
+            glEnableVertexAttribArray(m_aTextureCoord);
+        }
+
         glDrawArrays(GL_TRIANGLES, 0, m_modelVertexCount);
 
+        if(m_aTextureCoord >= 0) glDisableVertexAttribArray(m_aTextureCoord);
         if(m_aNormal >= 0) glDisableVertexAttribArray(m_aNormal);
         glDisableVertexAttribArray(m_aPosition);
     }
@@ -262,6 +292,9 @@ void GlWidget::cleanup()
 
     delete m_program_p;
     m_program_p = nullptr;
+
+    delete m_texture_p;
+    m_texture_p = nullptr;
 
     doneCurrent();
 }
@@ -296,6 +329,17 @@ void GlWidget::buildShaders()
     m_uModel = m_program_p->uniformLocation("uModel");
     m_uView = m_program_p->uniformLocation("uView");
     m_uProjection = m_program_p->uniformLocation("uProjection");
+    m_uTexture = m_program_p->uniformLocation("uTexture");
     m_aPosition = m_program_p->attributeLocation("aPosition");
     m_aNormal = m_program_p->attributeLocation("aNormal");
+    m_aTextureCoord = m_program_p->attributeLocation("aTextureCoord");
+}
+
+//=============================================================================
+void GlWidget::prepareModel()
+{
+    m_modelChanged = false;
+
+    delete m_texture_p;
+    m_texture_p = new QOpenGLTexture(m_textureData.mirrored());
 }

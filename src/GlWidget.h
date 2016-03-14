@@ -3,6 +3,7 @@
 #include <QOpenGLWidget>
 
 class QOpenGLShaderProgram;
+class QOpenGLTexture;
 
 class GlWidget final : public QOpenGLWidget, private QOpenGLFunctions
 {
@@ -34,6 +35,7 @@ private slots:
 
 private:
     void buildShaders();
+    void prepareModel();
 
     QMatrix4x4 m_projectionMatrix;
 
@@ -43,6 +45,9 @@ private:
 
     GLfloat *m_modelData_p;
     int m_modelVertexCount;
+    QImage m_textureData;
+    QOpenGLTexture *m_texture_p;
+    bool m_modelChanged;
 
     QOpenGLShaderProgram *m_program_p;
 
@@ -53,6 +58,8 @@ private:
     int m_uModel;
     int m_uView;
     int m_uProjection;
+    int m_uTexture;
     int m_aPosition;
     int m_aNormal;
+    int m_aTextureCoord;
 };

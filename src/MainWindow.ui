@@ -47,18 +47,21 @@
             <enum>QPlainTextEdit::NoWrap</enum>
            </property>
            <property name="plainText">
-            <string>uniform highp mat4 uModel;
-uniform highp mat4 uView;
-uniform highp mat4 uProjection;
+            <string>uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProjection;
 
-attribute highp vec3 aPosition;
-attribute highp vec3 aNormal;
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec2 aTextureCoord;
 
-varying highp vec3 vNormal;
+varying vec2 vTextureCoord;
+varying vec3 vNormal;
 
 void main() {
     gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
     vNormal = (uView * uModel * vec4(aNormal, 0.0)).xyz;
+    vTextureCoord = aTextureCoord;
 }
 </string>
            </property>
@@ -89,7 +92,10 @@ void main() {
             <enum>QPlainTextEdit::NoWrap</enum>
            </property>
            <property name="plainText">
-            <string>varying vec3 vNormal;
+            <string>uniform sampler2D uTexture;
+
+varying vec2 vTextureCoord;
+varying vec3 vNormal;
 
 void main() {
     vec3 ambientColor = vec3(0.3, 0.3, 0.3);
@@ -98,7 +104,8 @@ void main() {
 
     vec3 normal = normalize(vNormal);
     vec3 diffuse = dot(normal, diffuseDirection) * diffuseColor;
-    gl_FragColor = vec4(diffuse + ambientColor, 1.0);
+    gl_FragColor = texture2D(uTexture, vTextureCoord) *
+            vec4(diffuse + ambientColor, 1.0);
 }
 </string>
            </property>
