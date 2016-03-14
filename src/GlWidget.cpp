@@ -259,7 +259,10 @@ void GlWidget::paintGL()
 void GlWidget::cleanup()
 {
     makeCurrent();
-    // TODO: Clean up GL resources here.
+
+    delete m_program_p;
+    m_program_p = nullptr;
+
     doneCurrent();
 }
 
