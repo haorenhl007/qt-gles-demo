@@ -5,7 +5,7 @@
 
 #include "Ply/PlyModel.h"
 
-constexpr int numVertexValues = 8;
+constexpr int numVertexValues = 11;
 constexpr int stride = numVertexValues * sizeof(GLfloat);
 
 //=============================================================================
@@ -60,6 +60,18 @@ static GLfloat *convertPly(PlyModel model, int *vertexCountOut)
     for(int f = 0; f < faceCount; ++f) {
         QList<double> indices = model.listValue("face", f, "vertex_indices");
         if(indices.count() != 3) return nullptr;
+
+        QVector3D faceNormal;
+        {
+            Vertex v1 = verts.value(indices.value(0));
+            Vertex v2 = verts.value(indices.value(1));
+            Vertex v3 = verts.value(indices.value(2));
+            QVector3D p1(v1.x, v1.y, v1.z);
+            QVector3D p2(v2.x, v2.y, v2.z);
+            QVector3D p3(v3.x, v3.y, v3.z);
+            faceNormal = QVector3D::crossProduct((p2 - p1), (p3 - p2));
+        }
+
         for(int i = 0; i < indices.count(); ++i) {
             int v = (int)indices.value(i);
             if(v >= verts.count()) return nullptr;
@@ -70,6 +82,9 @@ static GLfloat *convertPly(PlyModel model, int *vertexCountOut)
             face_verts.append(vert.nx);
             face_verts.append(vert.ny);
             face_verts.append(vert.nz);
+            face_verts.append(faceNormal.x());
+            face_verts.append(faceNormal.y());
+            face_verts.append(faceNormal.z());
             face_verts.append(vert.s);
             face_verts.append(vert.t);
         }
@@ -196,7 +211,7 @@ void GlWidget::paintGL()
 
         if(m_aNormal >= 0) {
             glVertexAttribPointer(
-                    m_aNormal, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p+3);
+                    m_aNormal, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p+6);
             glEnableVertexAttribArray(m_aNormal);
         }
 
