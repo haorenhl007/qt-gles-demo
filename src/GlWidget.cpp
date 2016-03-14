@@ -127,15 +127,13 @@ void GlWidget::setModel(const QString& modelPath)
 {
     QFile file(modelPath);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // TODO: notify.
-        qDebug("Could not open file \"%s\"", modelPath.toUtf8().constData());
+        notify(QString("Could not open file \"%1\"").arg(modelPath));
         return;
     }
     QTextStream stream(&file);
     PlyModel ply = PlyModel::parse(stream);
     if(!ply.isValid()) {
-        // TODO: notify.
-        qDebug("Invalid PLY file \"%s\"", modelPath.toUtf8().constData());
+        notify(QString("Invalid PLY file \"%1\"").arg(modelPath));
         return;
     }
     delete m_modelData_p;
@@ -191,8 +189,8 @@ void GlWidget::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // TODO: Let user control camera.
-    QVector3D eye(20, 18, 10);
-    QVector3D target(0, 0, 5);
+    QVector3D eye(15, -14, 10);
+    QVector3D target(0, 0, 6);
     QVector3D up(0, 0, 1);
     QMatrix4x4 viewMatrix;
     viewMatrix.lookAt(eye, target, up);

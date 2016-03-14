@@ -20,5 +20,5 @@ void MainWindow::on_buttonInstall_clicked()
 
 void MainWindow::on_glWidget_notify(const QString& text)
 {
-    ui.textResult->setPlainText(text);
+    ui.textResult->append(text);
 }
