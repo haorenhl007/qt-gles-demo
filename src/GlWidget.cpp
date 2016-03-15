@@ -11,6 +11,58 @@ constexpr int numVertexValues = 11;
 constexpr int stride = numVertexValues * sizeof(GLfloat);
 
 //=============================================================================
+static GLfloat *makeGrid(int w, int h, int *vertexCountOut)
+{
+    struct Point
+    {
+        GLfloat x;
+        GLfloat y;
+    };
+    const Point vertexOffsets[] = {
+        { 0.0, 0.0 },
+        { 1.0, 1.0 },
+        { 0.0, 1.0 },
+        { 0.0, 0.0 },
+        { 1.0, 0.0 },
+        { 1.0, 1.0 }
+    };
+
+    const Point textureCoords[] = {
+        { 0.0, 0.0 },
+        { 1.0, 1.0 },
+        { 0.0, 1.0 },
+        { 0.0, 0.0 },
+        { 1.0, 0.0 },
+        { 1.0, 1.0 }
+    };
+
+    const int cellCount = w * h;
+    const int vertexCount = cellCount * 6;
+    auto data_p = new GLfloat[numVertexValues * vertexCount];
+    GLfloat *vertex_p = data_p;
+    for(int y = -h/2; y < h/2; ++y) {
+        for(int x = -w/2; x < w/2; ++x) {
+            for(int i = 0; i < 6; ++i) {
+                vertex_p[0] = 2*x + 2*vertexOffsets[i].x; // x
+                vertex_p[1] = 2*y + 2*vertexOffsets[i].y; // y
+                vertex_p[2] = 0.0f; // z
+                vertex_p[3] = 0.0f; // nx
+                vertex_p[4] = 0.0f; // ny
+                vertex_p[5] = 1.0f; // nz
+                vertex_p[6] = 0.0f; // fnx
+                vertex_p[7] = 0.0f; // fny
+                vertex_p[8] = 1.0f; // fnz
+                vertex_p[9] = textureCoords[i].x; // s
+                vertex_p[10] = textureCoords[i].y; // t
+                vertex_p += numVertexValues;
+            }
+        }
+    }
+    if(vertexCountOut) *vertexCountOut = vertexCount;
+    return data_p;
+}
+
+//=============================================================================
 static GLfloat *convertPly(PlyModel model, int *vertexCountOut)
 {
     struct Vertex
@@ -109,6 +161,9 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_modelVertexCount(0),
         m_texture_p(nullptr),
         m_modelChanged(false),
+        m_gridData_p(nullptr),
+        m_gridVertexCount(0),
+        m_gridTexture_p(nullptr),
         m_program_p(nullptr),
         m_shadersChanged(false),
         m_uModel(-1),
@@ -122,12 +177,15 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
     QSurfaceFormat f = format();
     f.setDepthBufferSize(24);
     setFormat(f);
+
+    m_gridData_p = makeGrid(10, 10, &m_gridVertexCount);
 }
 
 //=============================================================================
 GlWidget::~GlWidget()
 {
     cleanup();
+    delete m_gridData_p;
     delete m_modelData_p;
 }
 
@@ -199,7 +257,13 @@ void GlWidget::initializeGL()
 
     if(m_shadersChanged) buildShaders();
 
-    glClearColor(1.0, 0.0, 0.0, 1.0);
+    delete m_gridTexture_p;
+    m_gridTexture_p = new QOpenGLTexture(
+            QImage(":/grid-texture.png").mirrored());
+    m_gridTexture_p->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+    m_gridTexture_p->setMagnificationFilter(QOpenGLTexture::Linear);
+
+    glClearColor(1.0, 1.0, 1.0, 1.0);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -282,6 +346,37 @@ void GlWidget::paintGL()
         glDisableVertexAttribArray(m_aPosition);
     }
 
+    {
+        if(m_gridTexture_p && m_uTexture >= 0) {
+            constexpr int textureUnit = 0;
+            m_gridTexture_p->bind(textureUnit);
+            glUniform1i(m_uTexture, textureUnit);
+        }
+
+        glVertexAttribPointer(
+                m_aPosition, 3, GL_FLOAT, GL_FALSE, stride, m_gridData_p);
+        glEnableVertexAttribArray(m_aPosition);
+
+        if(m_aNormal >= 0) {
+            glVertexAttribPointer(
+                    m_aNormal, 3, GL_FLOAT, GL_FALSE, stride, m_gridData_p+3);
+            glEnableVertexAttribArray(m_aNormal);
+        }
+
+        if(m_aTextureCoord >= 0) {
+            glVertexAttribPointer(
+                    m_aTextureCoord, 2, GL_FLOAT, GL_FALSE, stride,
+                    m_gridData_p+9);
+            glEnableVertexAttribArray(m_aTextureCoord);
+        }
+
+        glDrawArrays(GL_TRIANGLES, 0, m_gridVertexCount);
+
+        if(m_aTextureCoord >= 0) glDisableVertexAttribArray(m_aTextureCoord);
+        if(m_aNormal >= 0) glDisableVertexAttribArray(m_aNormal);
+        glDisableVertexAttribArray(m_aPosition);
+    }
+
     m_program_p->release();
 }
 
@@ -292,6 +387,9 @@ void GlWidget::cleanup()
 
     delete m_program_p;
     m_program_p = nullptr;
+
+    delete m_gridTexture_p;
+    m_gridTexture_p = nullptr;
 
     delete m_texture_p;
     m_texture_p = nullptr;

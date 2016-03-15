@@ -3,5 +3,6 @@
     <file>chicken-normal.png</file>
     <file>chicken-texture.png</file>
     <file>chicken.ply</file>
+    <file>grid-texture.png</file>
 </qresource>
 </RCC>

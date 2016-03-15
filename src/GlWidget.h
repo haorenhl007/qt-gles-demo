@@ -49,6 +49,10 @@ private:
     QOpenGLTexture *m_texture_p;
     bool m_modelChanged;
 
+    GLfloat *m_gridData_p;
+    int m_gridVertexCount;
+    QOpenGLTexture *m_gridTexture_p;
+
     QOpenGLShaderProgram *m_program_p;
 
     QString m_vertexSource;
