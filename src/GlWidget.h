@@ -55,6 +55,7 @@ private:
         int uModel = -1;
         int uView = -1;
         int uProjection = -1;
+        int uNormalMatrix = -1;
         int uTexture = -1;
 
         int aPosition = -1;

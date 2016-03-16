@@ -203,9 +203,11 @@ void GlWidget::paintGL()
     if(m_program_p) {
         m_program_p->bind();
 
+        m_program_p->setUniformValue(m_vars.uModel, m_modelMatrix);
         m_program_p->setUniformValue(m_vars.uView, m_viewMatrix);
         m_program_p->setUniformValue(m_vars.uProjection, m_projectionMatrix);
-        m_program_p->setUniformValue(m_vars.uModel, m_modelMatrix);
+        m_program_p->setUniformValue(m_vars.uNormalMatrix,
+                (m_viewMatrix * m_modelMatrix).inverted().transposed());
 
         if(m_modelData_p) {
             glVertexAttribPointer(m_vars.aPosition,
@@ -254,11 +256,11 @@ void GlWidget::paintGL()
         m_ornamentProgram_p->bind();
 
         m_ornamentProgram_p->setUniformValue(
+                m_ornamentVars.uModel, QMatrix4x4());
+        m_ornamentProgram_p->setUniformValue(
                 m_ornamentVars.uView, m_viewMatrix);
         m_ornamentProgram_p->setUniformValue(
                 m_ornamentVars.uProjection, m_projectionMatrix);
-        m_ornamentProgram_p->setUniformValue(
-                m_ornamentVars.uModel, QMatrix4x4());
 
         glVertexAttribPointer(m_ornamentVars.aPosition,
                 3, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p);
@@ -370,6 +372,7 @@ void GlWidget::buildShaders()
     m_vars.uModel = program_p->uniformLocation("uModel");
     m_vars.uView = program_p->uniformLocation("uView");
     m_vars.uProjection = program_p->uniformLocation("uProjection");
+    m_vars.uNormalMatrix = program_p->uniformLocation("uNormalMatrix");
     m_vars.uTexture = program_p->uniformLocation("uTexture");
     m_vars.aPosition = program_p->attributeLocation("aPosition");
     m_vars.aNormal = program_p->attributeLocation("aNormal");
