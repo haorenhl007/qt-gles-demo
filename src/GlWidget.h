@@ -51,9 +51,21 @@ private slots:
     void cleanup();
 
 private:
+    struct ShaderVars {
+        int uModel = -1;
+        int uView = -1;
+        int uProjection = -1;
+        int uTexture = -1;
+
+        int aPosition = -1;
+        int aNormal = -1;
+        int aTextureCoord = -1;
+    };
+
     void updateViewMatrix();
     void updateProjectionMatrix();
     void buildShaders();
+    void buildOrnamentShaders();
     void prepareModel();
 
     bool m_mouseActive;
@@ -84,16 +96,12 @@ private:
     QOpenGLTexture *m_gridTexture_p;
 
     QOpenGLShaderProgram *m_program_p;
+    ShaderVars m_vars;
+
+    QOpenGLShaderProgram *m_ornamentProgram_p;
+    ShaderVars m_ornamentVars;
 
     QString m_vertexSource;
     QString m_fragmentSource;
     bool m_shadersChanged;
-
-    int m_uModel;
-    int m_uView;
-    int m_uProjection;
-    int m_uTexture;
-    int m_aPosition;
-    int m_aNormal;
-    int m_aTextureCoord;
 };

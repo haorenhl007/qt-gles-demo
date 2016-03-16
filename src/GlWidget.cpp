@@ -26,14 +26,8 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_gridVertexCount(0),
         m_gridTexture_p(nullptr),
         m_program_p(nullptr),
-        m_shadersChanged(false),
-        m_uModel(-1),
-        m_uView(-1),
-        m_uProjection(-1),
-        m_uTexture(-1),
-        m_aPosition(-1),
-        m_aNormal(-1),
-        m_aTextureCoord(-1)
+        m_ornamentProgram_p(nullptr),
+        m_shadersChanged(false)
 {
     QSurfaceFormat f = format();
     f.setDepthBufferSize(24);
@@ -159,6 +153,7 @@ void GlWidget::initializeGL()
         this, &GlWidget::cleanup);
 
     if(m_shadersChanged) buildShaders();
+    buildOrnamentShaders();
 
     delete m_gridTexture_p;
     m_gridTexture_p = new QOpenGLTexture(
@@ -188,8 +183,6 @@ void GlWidget::paintGL()
 {
     if(m_shadersChanged) buildShaders();
     if(m_modelChanged) prepareModel();
-    if(!m_program_p) return;
-    m_program_p->bind();
 
     if(m_enableDepthTesting) {
         glEnable(GL_DEPTH_TEST);
@@ -207,79 +200,92 @@ void GlWidget::paintGL()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_program_p->setUniformValue(m_uView, m_viewMatrix);
-    m_program_p->setUniformValue(m_uProjection, m_projectionMatrix);
+    if(m_program_p) {
+        m_program_p->bind();
 
-    if(m_modelData_p) {
-        m_program_p->setUniformValue(m_uModel, m_modelMatrix);
+        m_program_p->setUniformValue(m_vars.uView, m_viewMatrix);
+        m_program_p->setUniformValue(m_vars.uProjection, m_projectionMatrix);
+        m_program_p->setUniformValue(m_vars.uModel, m_modelMatrix);
 
-        glVertexAttribPointer(
-                m_aPosition, 3, GL_FLOAT, GL_FALSE, STRIDE, m_modelData_p);
-        glEnableVertexAttribArray(m_aPosition);
+        if(m_modelData_p) {
+            glVertexAttribPointer(m_vars.aPosition,
+                    3, GL_FLOAT, GL_FALSE, STRIDE, m_modelData_p);
+            glEnableVertexAttribArray(m_vars.aPosition);
 
-        if(m_aNormal >= 0) {
-            GLfloat *data_p = m_modelData_p + (m_enableFacetedRender ? 6 : 3);
-            glVertexAttribPointer(
-                    m_aNormal, 3, GL_FLOAT, GL_FALSE, STRIDE, data_p);
-            glEnableVertexAttribArray(m_aNormal);
+            if(m_vars.aNormal >= 0) {
+                GLfloat *data_p = m_modelData_p +
+                        (m_enableFacetedRender ? 6 : 3);
+                glVertexAttribPointer(m_vars.aNormal,
+                        3, GL_FLOAT, GL_FALSE, STRIDE, data_p);
+                glEnableVertexAttribArray(m_vars.aNormal);
+            }
+
+            if(m_vars.aTextureCoord >= 0) {
+                glVertexAttribPointer(m_vars.aTextureCoord,
+                        2, GL_FLOAT, GL_FALSE, STRIDE, m_modelData_p+9);
+                glEnableVertexAttribArray(m_vars.aTextureCoord);
+            }
+
+            if(m_texture_p && m_vars.uTexture >= 0) {
+                constexpr int textureUnit = 0;
+                m_texture_p->bind(textureUnit);
+                glUniform1i(m_vars.uTexture, textureUnit);
+            }
+
+            glDrawArrays(GL_TRIANGLES, 0, m_modelVertexCount);
+
+            if(m_vars.aTextureCoord >= 0) {
+                glDisableVertexAttribArray(m_vars.aTextureCoord);
+            }
+
+            if(m_vars.aNormal >= 0) {
+                glDisableVertexAttribArray(m_vars.aNormal);
+            }
+
+            glDisableVertexAttribArray(m_vars.aPosition);
         }
 
-        if(m_aTextureCoord >= 0) {
-            glVertexAttribPointer(
-                    m_aTextureCoord, 2, GL_FLOAT, GL_FALSE, STRIDE,
-                    m_modelData_p+9);
-            glEnableVertexAttribArray(m_aTextureCoord);
-        }
-
-        if(m_texture_p && m_uTexture >= 0) {
-            constexpr int textureUnit = 0;
-            m_texture_p->bind(textureUnit);
-            glUniform1i(m_uTexture, textureUnit);
-        }
-
-        glDrawArrays(GL_TRIANGLES, 0, m_modelVertexCount);
-
-        if(m_aTextureCoord >= 0) glDisableVertexAttribArray(m_aTextureCoord);
-        if(m_aNormal >= 0) glDisableVertexAttribArray(m_aNormal);
-        glDisableVertexAttribArray(m_aPosition);
+        m_program_p->release();
     }
 
-    {
-        glDisable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
 
-        m_program_p->setUniformValue(m_uModel, QMatrix4x4());
+    if(m_ornamentProgram_p) {
+        m_ornamentProgram_p->bind();
 
-        glVertexAttribPointer(
-                m_aPosition, 3, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p);
-        glEnableVertexAttribArray(m_aPosition);
+        m_ornamentProgram_p->setUniformValue(
+                m_ornamentVars.uView, m_viewMatrix);
+        m_ornamentProgram_p->setUniformValue(
+                m_ornamentVars.uProjection, m_projectionMatrix);
+        m_ornamentProgram_p->setUniformValue(
+                m_ornamentVars.uModel, QMatrix4x4());
 
-        if(m_aNormal >= 0) {
-            glVertexAttribPointer(
-                    m_aNormal, 3, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p+3);
-            glEnableVertexAttribArray(m_aNormal);
+        glVertexAttribPointer(m_ornamentVars.aPosition,
+                3, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p);
+        glEnableVertexAttribArray(m_ornamentVars.aPosition);
+
+        if(m_ornamentVars.aTextureCoord >= 0) {
+            glVertexAttribPointer(m_ornamentVars.aTextureCoord,
+                    2, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p+9);
+            glEnableVertexAttribArray(m_ornamentVars.aTextureCoord);
         }
 
-        if(m_aTextureCoord >= 0) {
-            glVertexAttribPointer(
-                    m_aTextureCoord, 2, GL_FLOAT, GL_FALSE, STRIDE,
-                    m_gridData_p+9);
-            glEnableVertexAttribArray(m_aTextureCoord);
-        }
-
-        if(m_gridTexture_p && m_uTexture >= 0) {
+        if(m_gridTexture_p && m_ornamentVars.uTexture >= 0) {
             constexpr int textureUnit = 0;
             m_gridTexture_p->bind(textureUnit);
-            glUniform1i(m_uTexture, textureUnit);
+            glUniform1i(m_ornamentVars.uTexture, textureUnit);
         }
 
         glDrawArrays(GL_TRIANGLES, 0, m_gridVertexCount);
 
-        if(m_aTextureCoord >= 0) glDisableVertexAttribArray(m_aTextureCoord);
-        if(m_aNormal >= 0) glDisableVertexAttribArray(m_aNormal);
-        glDisableVertexAttribArray(m_aPosition);
-    }
+        if(m_ornamentVars.aTextureCoord >= 0) {
+            glDisableVertexAttribArray(m_ornamentVars.aTextureCoord);
+        }
 
-    m_program_p->release();
+        glDisableVertexAttribArray(m_ornamentVars.aPosition);
+
+        m_ornamentProgram_p->release();
+    }
 }
 
 //=============================================================================
@@ -289,6 +295,9 @@ void GlWidget::cleanup()
 
     delete m_program_p;
     m_program_p = nullptr;
+
+    delete m_ornamentProgram_p;
+    m_ornamentProgram_p = nullptr;
 
     delete m_gridTexture_p;
     m_gridTexture_p = nullptr;
@@ -358,13 +367,35 @@ void GlWidget::buildShaders()
     m_program_p = program_p;
     emit notify("Shader program built successfully!");
 
-    m_uModel = m_program_p->uniformLocation("uModel");
-    m_uView = m_program_p->uniformLocation("uView");
-    m_uProjection = m_program_p->uniformLocation("uProjection");
-    m_uTexture = m_program_p->uniformLocation("uTexture");
-    m_aPosition = m_program_p->attributeLocation("aPosition");
-    m_aNormal = m_program_p->attributeLocation("aNormal");
-    m_aTextureCoord = m_program_p->attributeLocation("aTextureCoord");
+    m_vars.uModel = program_p->uniformLocation("uModel");
+    m_vars.uView = program_p->uniformLocation("uView");
+    m_vars.uProjection = program_p->uniformLocation("uProjection");
+    m_vars.uTexture = program_p->uniformLocation("uTexture");
+    m_vars.aPosition = program_p->attributeLocation("aPosition");
+    m_vars.aNormal = program_p->attributeLocation("aNormal");
+    m_vars.aTextureCoord = program_p->attributeLocation("aTextureCoord");
+}
+
+//=============================================================================
+void GlWidget::buildOrnamentShaders()
+{
+    auto program_p = new QOpenGLShaderProgram(this);
+    (void)program_p->addShaderFromSourceFile(
+            QOpenGLShader::Vertex, ":/ornaments.vert");
+    (void)program_p->addShaderFromSourceFile(
+            QOpenGLShader::Fragment, ":/ornaments.frag");
+    (void)program_p->link();
+
+    delete m_ornamentProgram_p;
+    m_ornamentProgram_p = program_p;
+
+    m_ornamentVars.uModel = program_p->uniformLocation("uModel");
+    m_ornamentVars.uView = program_p->uniformLocation("uView");
+    m_ornamentVars.uProjection = program_p->uniformLocation("uProjection");
+    m_ornamentVars.uTexture = program_p->uniformLocation("uTexture");
+    m_ornamentVars.aPosition = program_p->attributeLocation("aPosition");
+    m_ornamentVars.aTextureCoord =
+            program_p->attributeLocation("aTextureCoord");
 }
 
 //=============================================================================
