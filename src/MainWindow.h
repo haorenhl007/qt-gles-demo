@@ -14,6 +14,7 @@ public:
 
 private slots:
     void on_buttonInstall_clicked();
+    void on_sliderModelAngle_valueChanged(int degrees);
     void on_glWidget_notify(const QString& text);
 
 private:

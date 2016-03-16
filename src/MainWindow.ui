@@ -93,6 +93,7 @@ void main() {
            </property>
            <property name="plainText">
             <string>uniform sampler2D uTexture;
+uniform sampler2D uNormalMap;
 
 varying vec2 vTextureCoord;
 varying vec3 vNormal;
@@ -103,6 +104,7 @@ void main() {
     vec3 diffuseDirection = normalize(vec3(-1.0, 2.0, 3.0));
 
     vec3 normal = normalize(vNormal);
+            //texture2D(uNormalMap, vTextureCoord).xyz
     vec3 diffuse = dot(normal, diffuseDirection) * diffuseColor;
     gl_FragColor = texture2D(uTexture, vTextureCoord) *
             vec4(diffuse + ambientColor, 1.0);
@@ -132,33 +134,61 @@ void main() {
       <attribute name="title">
        <string>Configuration</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_6">
+      <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
-        <widget class="QCheckBox" name="checkFaceCulling">
-         <property name="text">
-          <string>Face culling</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
+        <layout class="QVBoxLayout" name="verticalLayout_6">
+         <item>
+          <widget class="QCheckBox" name="checkFaceCulling">
+           <property name="text">
+            <string>Face culling</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkDepthTesting">
+           <property name="text">
+            <string>Depth testing</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkFaceNormals">
+           <property name="text">
+            <string>Use face normals</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
-        <widget class="QCheckBox" name="checkDepthTesting">
-         <property name="text">
-          <string>Depth testing</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="checkFaceNormals">
-         <property name="text">
-          <string>Use face normals</string>
-         </property>
-        </widget>
+        <layout class="QFormLayout" name="formLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Model Angle</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSlider" name="sliderModelAngle">
+           <property name="minimum">
+            <number>-180</number>
+           </property>
+           <property name="maximum">
+            <number>180</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
         <spacer name="verticalSpacer">
@@ -167,8 +197,8 @@ void main() {
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>928</height>
+           <width>0</width>
+           <height>0</height>
           </size>
          </property>
         </spacer>

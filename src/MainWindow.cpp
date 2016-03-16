@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 
+//=============================================================================
 MainWindow::MainWindow()
 {
     ui.setupUi( this );
@@ -18,10 +19,12 @@ MainWindow::MainWindow()
     ui.glWidget->enableFacetedRender(ui.checkFaceNormals->isChecked());
 }
 
+//=============================================================================
 MainWindow::~MainWindow()
 {
 }
 
+//=============================================================================
 void MainWindow::on_buttonInstall_clicked()
 {
     const QString vertexSource = ui.textVertex->toPlainText();
@@ -29,6 +32,13 @@ void MainWindow::on_buttonInstall_clicked()
     ui.glWidget->installShaders(vertexSource, fragmentSource);
 }
 
+//=============================================================================
+void MainWindow::on_sliderModelAngle_valueChanged(int degrees)
+{
+    ui.glWidget->setModelAngle(degrees);
+}
+
+//=============================================================================
 void MainWindow::on_glWidget_notify(const QString& text)
 {
     ui.textResult->append(text);

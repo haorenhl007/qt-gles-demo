@@ -221,6 +221,14 @@ void GlWidget::setModel(const QString& modelPath)
 }
 
 //=============================================================================
+void GlWidget::setModelAngle(int degrees)
+{
+    m_modelMatrix = QMatrix4x4();
+    m_modelMatrix.rotate(degrees, 0.0f, 0.0f, 1.0f);
+    update();
+}
+
+//=============================================================================
 void GlWidget::installShaders(const QString& vertexSource,
         const QString& fragmentSource)
 {
@@ -333,20 +341,12 @@ void GlWidget::paintGL()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // TODO: Let user reposition model.
-    QMatrix4x4 modelMatrix;
-
-    m_program_p->setUniformValue(m_uModel, modelMatrix);
     m_program_p->setUniformValue(m_uView, m_viewMatrix);
     m_program_p->setUniformValue(m_uProjection, m_projectionMatrix);
 
-    if(m_texture_p && m_uTexture >= 0) {
-        constexpr int textureUnit = 0;
-        m_texture_p->bind(textureUnit);
-        glUniform1i(m_uTexture, textureUnit);
-    }
-
     if(m_modelData_p) {
+        m_program_p->setUniformValue(m_uModel, m_modelMatrix);
+
         glVertexAttribPointer(
                 m_aPosition, 3, GL_FLOAT, GL_FALSE, stride, m_modelData_p);
         glEnableVertexAttribArray(m_aPosition);
@@ -365,6 +365,12 @@ void GlWidget::paintGL()
             glEnableVertexAttribArray(m_aTextureCoord);
         }
 
+        if(m_texture_p && m_uTexture >= 0) {
+            constexpr int textureUnit = 0;
+            m_texture_p->bind(textureUnit);
+            glUniform1i(m_uTexture, textureUnit);
+        }
+
         glDrawArrays(GL_TRIANGLES, 0, m_modelVertexCount);
 
         if(m_aTextureCoord >= 0) glDisableVertexAttribArray(m_aTextureCoord);
@@ -373,11 +379,7 @@ void GlWidget::paintGL()
     }
 
     {
-        if(m_gridTexture_p && m_uTexture >= 0) {
-            constexpr int textureUnit = 0;
-            m_gridTexture_p->bind(textureUnit);
-            glUniform1i(m_uTexture, textureUnit);
-        }
+        m_program_p->setUniformValue(m_uModel, QMatrix4x4());
 
         glVertexAttribPointer(
                 m_aPosition, 3, GL_FLOAT, GL_FALSE, stride, m_gridData_p);
@@ -394,6 +396,12 @@ void GlWidget::paintGL()
                     m_aTextureCoord, 2, GL_FLOAT, GL_FALSE, stride,
                     m_gridData_p+9);
             glEnableVertexAttribArray(m_aTextureCoord);
+        }
+
+        if(m_gridTexture_p && m_uTexture >= 0) {
+            constexpr int textureUnit = 0;
+            m_gridTexture_p->bind(textureUnit);
+            glUniform1i(m_uTexture, textureUnit);
         }
 
         glDrawArrays(GL_TRIANGLES, 0, m_gridVertexCount);

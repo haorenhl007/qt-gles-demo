@@ -14,6 +14,8 @@ public:
     ~GlWidget() override;
 
     void setModel(const QString& modelPath);
+    void setModelAngle(int degrees);
+
     void installShaders(const QString& vertexSource,
             const QString& fragmentSource);
 
@@ -44,6 +46,8 @@ private:
 
     bool m_mouseActive;
     QPoint m_lastMouse;
+
+    QMatrix4x4 m_modelMatrix;
 
     double m_cameraAngleX;
     double m_cameraAngleZ;
