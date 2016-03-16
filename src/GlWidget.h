@@ -5,6 +5,12 @@
 class QOpenGLShaderProgram;
 class QOpenGLTexture;
 
+enum class Projection
+{
+    ORTHOGRAPHIC,
+    PERSPECTIVE
+};
+
 class GlWidget final : public QOpenGLWidget, private QOpenGLFunctions
 {
     Q_OBJECT;
@@ -15,6 +21,8 @@ public:
 
     void setModel(const QString& modelPath);
     void setModelAngle(int degrees);
+
+    void setProjection(Projection p);
 
     void installShaders(const QString& vertexSource,
             const QString& fragmentSource);
@@ -41,6 +49,7 @@ private slots:
 
 private:
     void updateViewMatrix();
+    void updateProjectionMatrix();
     void buildShaders();
     void prepareModel();
 
@@ -53,6 +62,8 @@ private:
     double m_cameraAngleZ;
     QMatrix4x4 m_viewMatrix;
 
+    double m_aspectRatio;
+    Projection m_projection;
     QMatrix4x4 m_projectionMatrix;
 
     bool m_enableFaceCulling;

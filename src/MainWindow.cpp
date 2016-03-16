@@ -7,12 +7,23 @@ MainWindow::MainWindow()
     ui.buttonInstall->click();
     ui.glWidget->setModel(":/chicken.ply");
 
+    connect(ui.radioOrthographic, &QRadioButton::toggled,
+            ui.glWidget, [this]() {
+                ui.glWidget->setProjection(Projection::ORTHOGRAPHIC);
+            });
+    connect(ui.radioPerspective, &QRadioButton::toggled,
+            ui.glWidget, [this]() {
+                ui.glWidget->setProjection(Projection::PERSPECTIVE);
+            });
+
     connect(ui.checkFaceCulling, &QCheckBox::toggled,
             ui.glWidget, &GlWidget::enableFaceCulling);
     connect(ui.checkDepthTesting, &QCheckBox::toggled,
             ui.glWidget, &GlWidget::enableDepthTesting);
     connect(ui.checkFaceNormals, &QCheckBox::toggled,
             ui.glWidget, &GlWidget::enableFacetedRender);
+
+    ui.radioPerspective->click();
 
     ui.glWidget->enableFaceCulling(ui.checkFaceCulling->isChecked());
     ui.glWidget->enableDepthTesting(ui.checkDepthTesting->isChecked());

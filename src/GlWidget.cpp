@@ -158,6 +158,8 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_mouseActive(false),
         m_cameraAngleX(15.0),
         m_cameraAngleZ(-45.0),
+        m_aspectRatio(1.0),
+        m_projection(Projection::PERSPECTIVE),
         m_enableFaceCulling(true),
         m_enableDepthTesting(true),
         m_enableFacetedRender(false),
@@ -226,6 +228,13 @@ void GlWidget::setModelAngle(int degrees)
     m_modelMatrix = QMatrix4x4();
     m_modelMatrix.rotate(degrees, 0.0f, 0.0f, 1.0f);
     update();
+}
+
+//=============================================================================
+void GlWidget::setProjection(Projection p)
+{
+    m_projection = p;
+    updateProjectionMatrix();
 }
 
 //=============================================================================
@@ -313,8 +322,10 @@ void GlWidget::initializeGL()
 //=============================================================================
 void GlWidget::resizeGL(int w, int h)
 {
-    m_projectionMatrix = QMatrix4x4();
-    m_projectionMatrix.perspective(60, w/(float)h, 0.01f, 100.0f);
+    if(h > 0) {
+        m_aspectRatio = w / (double)h;
+    }
+    updateProjectionMatrix();
 }
 
 //=============================================================================
@@ -440,6 +451,26 @@ void GlWidget::updateViewMatrix()
     m_viewMatrix.rotate(m_cameraAngleX, 1.0f, 0.0f, 0.0f);
     m_viewMatrix.rotate(m_cameraAngleZ, 0.0f, 0.0f, 1.0f);
     m_viewMatrix.translate(0.0f, 0.0f, -6.0f);
+    update();
+}
+
+//=============================================================================
+void GlWidget::updateProjectionMatrix()
+{
+    m_projectionMatrix = QMatrix4x4();
+
+    switch(m_projection) {
+    case Projection::ORTHOGRAPHIC:
+        m_projectionMatrix.ortho(
+                -10*m_aspectRatio, 10*m_aspectRatio, // left, right
+                -10, 10, // bottom, top
+                0.01f, 100.0f); // near, far
+        break;
+    case Projection::PERSPECTIVE:
+        m_projectionMatrix.perspective(60, m_aspectRatio, 0.01f, 100.0f);
+        break;
+    }
+
     update();
 }
 
