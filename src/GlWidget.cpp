@@ -390,6 +390,8 @@ void GlWidget::paintGL()
     }
 
     {
+        glDisable(GL_CULL_FACE);
+
         m_program_p->setUniformValue(m_uModel, QMatrix4x4());
 
         glVertexAttribPointer(
