@@ -1,6 +1,7 @@
 #include "GlWidget.h"
 
 #include <QFile>
+#include <QMouseEvent>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QRegularExpression>
@@ -154,6 +155,9 @@ static GLfloat *convertPly(PlyModel model, int *vertexCountOut)
 
 //=============================================================================
 GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
+        m_mouseActive(false),
+        m_cameraAngleX(15.0),
+        m_cameraAngleZ(-45.0),
         m_enableFaceCulling(true),
         m_enableDepthTesting(true),
         m_enableFacetedRender(false),
@@ -249,6 +253,33 @@ void GlWidget::enableFacetedRender(bool enable)
 }
 
 //=============================================================================
+void GlWidget::mousePressEvent(QMouseEvent *event_p)
+{
+    if(event_p->button() == Qt::LeftButton) {
+        m_lastMouse = event_p->pos();
+        m_mouseActive = true;
+    }
+}
+
+//=============================================================================
+void GlWidget::mouseMoveEvent(QMouseEvent *event_p)
+{
+    if(m_mouseActive) {
+        QPoint position = event_p->pos();
+        m_cameraAngleZ += position.x() - m_lastMouse.x();
+        m_cameraAngleX += position.y() - m_lastMouse.y();
+        m_lastMouse = position;
+        updateViewMatrix();
+    }
+}
+
+//=============================================================================
+void GlWidget::mouseReleaseEvent(QMouseEvent *)
+{
+    m_mouseActive = false;
+}
+
+//=============================================================================
 void GlWidget::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -267,6 +298,8 @@ void GlWidget::initializeGL()
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    updateViewMatrix();
 }
 
 //=============================================================================
@@ -300,18 +333,11 @@ void GlWidget::paintGL()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // TODO: Let user control camera.
-    QVector3D eye(15, -14, 10);
-    QVector3D target(0, 0, 6);
-    QVector3D up(0, 0, 1);
-    QMatrix4x4 viewMatrix;
-    viewMatrix.lookAt(eye, target, up);
-
     // TODO: Let user reposition model.
     QMatrix4x4 modelMatrix;
 
     m_program_p->setUniformValue(m_uModel, modelMatrix);
-    m_program_p->setUniformValue(m_uView, viewMatrix);
+    m_program_p->setUniformValue(m_uView, m_viewMatrix);
     m_program_p->setUniformValue(m_uProjection, m_projectionMatrix);
 
     if(m_texture_p && m_uTexture >= 0) {
@@ -395,6 +421,18 @@ void GlWidget::cleanup()
     m_texture_p = nullptr;
 
     doneCurrent();
+}
+
+//=============================================================================
+void GlWidget::updateViewMatrix()
+{
+    m_viewMatrix = QMatrix4x4();
+    m_viewMatrix.rotate(-90.0f, 1.0f, 0.0f, 0.0f);
+    m_viewMatrix.translate(0.0f, 20.0f, 0.0f);
+    m_viewMatrix.rotate(m_cameraAngleX, 1.0f, 0.0f, 0.0f);
+    m_viewMatrix.rotate(m_cameraAngleZ, 0.0f, 0.0f, 1.0f);
+    m_viewMatrix.translate(0.0f, 0.0f, -6.0f);
+    update();
 }
 
 //=============================================================================

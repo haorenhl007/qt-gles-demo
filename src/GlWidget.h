@@ -26,6 +26,10 @@ public slots:
     void enableFacetedRender(bool enable);
 
 protected:
+    void mousePressEvent(QMouseEvent *event_p) override;
+    void mouseMoveEvent(QMouseEvent *event_p) override;
+    void mouseReleaseEvent(QMouseEvent *event_p) override;
+
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
@@ -34,8 +38,16 @@ private slots:
     void cleanup();
 
 private:
+    void updateViewMatrix();
     void buildShaders();
     void prepareModel();
+
+    bool m_mouseActive;
+    QPoint m_lastMouse;
+
+    double m_cameraAngleX;
+    double m_cameraAngleZ;
+    QMatrix4x4 m_viewMatrix;
 
     QMatrix4x4 m_projectionMatrix;
 
