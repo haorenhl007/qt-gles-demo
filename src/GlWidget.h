@@ -1,3 +1,5 @@
+#pragma once
+
 #include <QMatrix4x4>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
@@ -11,6 +13,7 @@ enum class Projection
     PERSPECTIVE
 };
 
+//=============================================================================
 class GlWidget final : public QOpenGLWidget, private QOpenGLFunctions
 {
     Q_OBJECT;

@@ -11,7 +11,9 @@ FORMS += MainWindow.ui
 
 HEADERS += GlWidget.h
 HEADERS += MainWindow.h
+HEADERS += ModelTools.h
 
 SOURCES += GlWidget.cpp
 SOURCES += main.cpp
 SOURCES += MainWindow.cpp
+SOURCES += ModelTools.cpp
