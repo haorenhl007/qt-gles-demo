@@ -67,7 +67,7 @@ private:
     void updateProjectionMatrix();
     void buildShaders();
     void buildOrnamentShaders();
-    void prepareModel();
+    void loadModel();
 
     bool m_mouseActive;
     QPoint m_lastMouse;
@@ -86,12 +86,12 @@ private:
     bool m_enableDepthTesting;
     bool m_enableFacetedRender;
 
-    GLfloat *m_modelData_p;
+    QString m_modelPath;
+    bool m_modelChanged;
     GLuint m_modelBuffer;
     int m_modelVertexCount;
     QImage m_textureData;
     QOpenGLTexture *m_texture_p;
-    bool m_modelChanged;
 
     GLfloat *m_gridData_p;
     int m_gridVertexCount;

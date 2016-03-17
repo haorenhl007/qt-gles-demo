@@ -18,11 +18,10 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_enableFaceCulling(true),
         m_enableDepthTesting(true),
         m_enableFacetedRender(false),
-        m_modelData_p(nullptr),
+        m_modelChanged(false),
         m_modelBuffer(0),
         m_modelVertexCount(0),
         m_texture_p(nullptr),
-        m_modelChanged(false),
         m_gridData_p(nullptr),
         m_gridVertexCount(0),
         m_gridTexture_p(nullptr),
@@ -42,34 +41,14 @@ GlWidget::~GlWidget()
 {
     cleanup();
     delete m_gridData_p;
-    delete m_modelData_p;
 }
 
 //=============================================================================
 void GlWidget::setModel(const QString& modelPath)
 {
-    QFile file(modelPath);
-    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        notify(QString("Could not open file \"%1\"").arg(modelPath));
-        return;
-    }
-    QTextStream stream(&file);
-    PlyModel ply = PlyModel::parse(stream);
-    if(!ply.isValid()) {
-        notify(QString("Invalid PLY file \"%1\"").arg(modelPath));
-        return;
-    }
-    delete m_modelData_p;
-    m_modelData_p = convertPly(ply, &m_modelVertexCount);
-
-    QString texturePath = modelPath;
-    (void)texturePath.replace(QRegularExpression("\\.[Pp][Ll][Yy]$"),
-            "-texture.png");
-    m_textureData = QImage(texturePath);
-
-    // TODO: Attempt to load normal map.
-
+    m_modelPath = modelPath;
     m_modelChanged = true;
+    update();
 }
 
 //=============================================================================
@@ -183,7 +162,7 @@ void GlWidget::resizeGL(int w, int h)
 void GlWidget::paintGL()
 {
     if(m_shadersChanged) buildShaders();
-    if(m_modelChanged) prepareModel();
+    if(m_modelChanged) loadModel();
 
     if(m_enableDepthTesting) {
         glEnable(GL_DEPTH_TEST);
@@ -414,16 +393,41 @@ void GlWidget::buildOrnamentShaders()
 }
 
 //=============================================================================
-void GlWidget::prepareModel()
+void GlWidget::loadModel()
 {
     m_modelChanged = false;
+    if(m_modelPath.isNull()) return;
 
+    // ==== Load model data ====
+    QFile file(m_modelPath);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        notify(QString("Could not open file \"%1\"").arg(m_modelPath));
+        return;
+    }
+    QTextStream stream(&file);
+    PlyModel ply = PlyModel::parse(stream);
+    if(!ply.isValid()) {
+        notify(QString("Invalid PLY file \"%1\"").arg(m_modelPath));
+        return;
+    }
+    GLfloat *data_p = convertPly(ply, &m_modelVertexCount);
+
+    glDeleteBuffers(1, &m_modelBuffer);
     glGenBuffers(1, &m_modelBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_modelBuffer);
-    glBufferData(GL_ARRAY_BUFFER, (STRIDE * m_modelVertexCount),
-            m_modelData_p, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,
+            (m_modelVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    delete[] data_p;
+
+    // ==== Load texture ====
+    QString texturePath = m_modelPath;
+    (void)texturePath.replace(QRegularExpression("\\.[Pp][Ll][Yy]$"),
+            "-texture.png");
+    m_textureData = QImage(texturePath);
     delete m_texture_p;
     m_texture_p = new QOpenGLTexture(m_textureData.mirrored());
+
+    // TODO: ==== Load normal map ====
 }
