@@ -19,6 +19,7 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_enableDepthTesting(true),
         m_enableFacetedRender(false),
         m_modelData_p(nullptr),
+        m_modelBuffer(0),
         m_modelVertexCount(0),
         m_texture_p(nullptr),
         m_modelChanged(false),
@@ -209,22 +210,28 @@ void GlWidget::paintGL()
         m_program_p->setUniformValue(m_vars.uNormalMatrix,
                 (m_viewMatrix * m_modelMatrix).inverted().transposed());
 
-        if(m_modelData_p) {
-            glVertexAttribPointer(m_vars.aPosition,
-                    3, GL_FLOAT, GL_FALSE, STRIDE, m_modelData_p);
-            glEnableVertexAttribArray(m_vars.aPosition);
+        if(m_modelBuffer) {
+            glBindBuffer(GL_ARRAY_BUFFER, m_modelBuffer);
+
+            if(m_vars.aPosition >= 0) {
+                const intptr_t offset = 0;
+                glVertexAttribPointer(m_vars.aPosition,
+                        3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
+                glEnableVertexAttribArray(m_vars.aPosition);
+            }
 
             if(m_vars.aNormal >= 0) {
-                GLfloat *data_p = m_modelData_p +
-                        (m_enableFacetedRender ? 6 : 3);
+                const intptr_t offset =
+                        (m_enableFacetedRender ? 6 : 3) * sizeof(GLfloat);
                 glVertexAttribPointer(m_vars.aNormal,
-                        3, GL_FLOAT, GL_FALSE, STRIDE, data_p);
+                        3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
                 glEnableVertexAttribArray(m_vars.aNormal);
             }
 
             if(m_vars.aTextureCoord >= 0) {
+                const intptr_t offset = 9 * sizeof(GLfloat);
                 glVertexAttribPointer(m_vars.aTextureCoord,
-                        2, GL_FLOAT, GL_FALSE, STRIDE, m_modelData_p+9);
+                        2, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
                 glEnableVertexAttribArray(m_vars.aTextureCoord);
             }
 
@@ -245,6 +252,8 @@ void GlWidget::paintGL()
             }
 
             glDisableVertexAttribArray(m_vars.aPosition);
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
 
         m_program_p->release();
@@ -300,6 +309,9 @@ void GlWidget::cleanup()
 
     delete m_ornamentProgram_p;
     m_ornamentProgram_p = nullptr;
+
+    glDeleteBuffers(1, &m_modelBuffer);
+    m_modelBuffer = 0;
 
     delete m_gridTexture_p;
     m_gridTexture_p = nullptr;
@@ -405,6 +417,12 @@ void GlWidget::buildOrnamentShaders()
 void GlWidget::prepareModel()
 {
     m_modelChanged = false;
+
+    glGenBuffers(1, &m_modelBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_modelBuffer);
+    glBufferData(GL_ARRAY_BUFFER, (STRIDE * m_modelVertexCount),
+            m_modelData_p, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     delete m_texture_p;
     m_texture_p = new QOpenGLTexture(m_textureData.mirrored());

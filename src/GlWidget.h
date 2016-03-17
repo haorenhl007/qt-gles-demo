@@ -87,6 +87,7 @@ private:
     bool m_enableFacetedRender;
 
     GLfloat *m_modelData_p;
+    GLuint m_modelBuffer;
     int m_modelVertexCount;
     QImage m_textureData;
     QOpenGLTexture *m_texture_p;
