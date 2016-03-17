@@ -201,22 +201,22 @@ void GlWidget::paintGL()
             glBindBuffer(GL_ARRAY_BUFFER, m_modelBuffer);
 
             if(m_vars.aPosition >= 0) {
-                const intptr_t offset = 0;
+                const intptr_t offset = POSITION_OFFSET;
                 glVertexAttribPointer(m_vars.aPosition,
                         3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
                 glEnableVertexAttribArray(m_vars.aPosition);
             }
 
             if(m_vars.aNormal >= 0) {
-                const intptr_t offset =
-                        (m_enableFacetedRender ? 6 : 3) * sizeof(GLfloat);
+                const intptr_t offset = m_enableFacetedRender ?
+                        FACE_NORMAL_OFFSET : NORMAL_OFFSET;
                 glVertexAttribPointer(m_vars.aNormal,
                         3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
                 glEnableVertexAttribArray(m_vars.aNormal);
             }
 
             if(m_vars.aTextureCoord >= 0) {
-                const intptr_t offset = 9 * sizeof(GLfloat);
+                const intptr_t offset = TEXTURE_COORD_OFFSET;
                 glVertexAttribPointer(m_vars.aTextureCoord,
                         2, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
                 glEnableVertexAttribArray(m_vars.aTextureCoord);
@@ -263,14 +263,14 @@ void GlWidget::paintGL()
         glBindBuffer(GL_ARRAY_BUFFER, m_gridBuffer);
 
         if(m_ornamentVars.aPosition >= 0) {
-            const intptr_t offset = 0;
+            const intptr_t offset = POSITION_OFFSET;
             glVertexAttribPointer(m_ornamentVars.aPosition,
                     3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
             glEnableVertexAttribArray(m_ornamentVars.aPosition);
         }
 
         if(m_ornamentVars.aTextureCoord >= 0) {
-            const intptr_t offset = 9 * sizeof(GLfloat);
+            const intptr_t offset = TEXTURE_COORD_OFFSET;
             glVertexAttribPointer(m_ornamentVars.aTextureCoord,
                     2, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
             glEnableVertexAttribArray(m_ornamentVars.aTextureCoord);
