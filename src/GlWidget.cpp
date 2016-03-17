@@ -22,7 +22,7 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_modelBuffer(0),
         m_modelVertexCount(0),
         m_texture_p(nullptr),
-        m_gridData_p(nullptr),
+        m_gridBuffer(0),
         m_gridVertexCount(0),
         m_gridTexture_p(nullptr),
         m_program_p(nullptr),
@@ -32,15 +32,12 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
     QSurfaceFormat f = format();
     f.setDepthBufferSize(24);
     setFormat(f);
-
-    m_gridData_p = makeGrid(10, 10, &m_gridVertexCount);
 }
 
 //=============================================================================
 GlWidget::~GlWidget()
 {
     cleanup();
-    delete m_gridData_p;
 }
 
 //=============================================================================
@@ -135,11 +132,22 @@ void GlWidget::initializeGL()
     if(m_shadersChanged) buildShaders();
     buildOrnamentShaders();
 
-    delete m_gridTexture_p;
-    m_gridTexture_p = new QOpenGLTexture(
-            QImage(":/grid-texture.png").mirrored());
-    m_gridTexture_p->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-    m_gridTexture_p->setMagnificationFilter(QOpenGLTexture::Linear);
+    {
+        GLfloat *data_p = makeGrid(10, 10, &m_gridVertexCount);
+        glDeleteBuffers(1, &m_gridBuffer);
+        glGenBuffers(1, &m_gridBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, m_gridBuffer);
+        glBufferData(GL_ARRAY_BUFFER,
+                (m_gridVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        delete data_p;
+
+        delete m_gridTexture_p;
+        m_gridTexture_p = new QOpenGLTexture(
+                QImage(":/grid-texture.png").mirrored());
+        m_gridTexture_p->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+        m_gridTexture_p->setMagnificationFilter(QOpenGLTexture::Linear);
+    }
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
@@ -230,7 +238,9 @@ void GlWidget::paintGL()
                 glDisableVertexAttribArray(m_vars.aNormal);
             }
 
-            glDisableVertexAttribArray(m_vars.aPosition);
+            if(m_vars.aPosition >= 0) {
+                glDisableVertexAttribArray(m_vars.aPosition);
+            }
 
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
@@ -250,13 +260,19 @@ void GlWidget::paintGL()
         m_ornamentProgram_p->setUniformValue(
                 m_ornamentVars.uProjection, m_projectionMatrix);
 
-        glVertexAttribPointer(m_ornamentVars.aPosition,
-                3, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p);
-        glEnableVertexAttribArray(m_ornamentVars.aPosition);
+        glBindBuffer(GL_ARRAY_BUFFER, m_gridBuffer);
+
+        if(m_ornamentVars.aPosition >= 0) {
+            const intptr_t offset = 0;
+            glVertexAttribPointer(m_ornamentVars.aPosition,
+                    3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
+            glEnableVertexAttribArray(m_ornamentVars.aPosition);
+        }
 
         if(m_ornamentVars.aTextureCoord >= 0) {
+            const intptr_t offset = 9 * sizeof(GLfloat);
             glVertexAttribPointer(m_ornamentVars.aTextureCoord,
-                    2, GL_FLOAT, GL_FALSE, STRIDE, m_gridData_p+9);
+                    2, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
             glEnableVertexAttribArray(m_ornamentVars.aTextureCoord);
         }
 
@@ -272,7 +288,11 @@ void GlWidget::paintGL()
             glDisableVertexAttribArray(m_ornamentVars.aTextureCoord);
         }
 
-        glDisableVertexAttribArray(m_ornamentVars.aPosition);
+        if(m_ornamentVars.aPosition >= 0) {
+            glDisableVertexAttribArray(m_ornamentVars.aPosition);
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         m_ornamentProgram_p->release();
     }
@@ -285,18 +305,18 @@ void GlWidget::cleanup()
 
     delete m_program_p;
     m_program_p = nullptr;
-
     delete m_ornamentProgram_p;
     m_ornamentProgram_p = nullptr;
 
     glDeleteBuffers(1, &m_modelBuffer);
     m_modelBuffer = 0;
-
-    delete m_gridTexture_p;
-    m_gridTexture_p = nullptr;
+    glDeleteBuffers(1, &m_gridBuffer);
+    m_gridBuffer = 0;
 
     delete m_texture_p;
     m_texture_p = nullptr;
+    delete m_gridTexture_p;
+    m_gridTexture_p = nullptr;
 
     doneCurrent();
 }
@@ -425,9 +445,8 @@ void GlWidget::loadModel()
     QString texturePath = m_modelPath;
     (void)texturePath.replace(QRegularExpression("\\.[Pp][Ll][Yy]$"),
             "-texture.png");
-    m_textureData = QImage(texturePath);
     delete m_texture_p;
-    m_texture_p = new QOpenGLTexture(m_textureData.mirrored());
+    m_texture_p = new QOpenGLTexture(QImage(texturePath).mirrored());
 
     // TODO: ==== Load normal map ====
 }

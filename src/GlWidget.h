@@ -90,10 +90,9 @@ private:
     bool m_modelChanged;
     GLuint m_modelBuffer;
     int m_modelVertexCount;
-    QImage m_textureData;
     QOpenGLTexture *m_texture_p;
 
-    GLfloat *m_gridData_p;
+    GLuint m_gridBuffer;
     int m_gridVertexCount;
     QOpenGLTexture *m_gridTexture_p;
 
