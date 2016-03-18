@@ -22,12 +22,15 @@ MainWindow::MainWindow()
             ui.glWidget, &GlWidget::enableDepthTesting);
     connect(ui.checkFaceNormals, &QCheckBox::toggled,
             ui.glWidget, &GlWidget::enableFacetedRender);
+    connect(ui.checkDrawNormals, &QCheckBox::toggled,
+            ui.glWidget, &GlWidget::enableDrawingNormals);
 
     ui.radioPerspective->click();
 
     ui.glWidget->enableFaceCulling(ui.checkFaceCulling->isChecked());
     ui.glWidget->enableDepthTesting(ui.checkDepthTesting->isChecked());
     ui.glWidget->enableFacetedRender(ui.checkFaceNormals->isChecked());
+    ui.glWidget->enableDrawingNormals(ui.checkDrawNormals->isChecked());
 }
 
 //=============================================================================

@@ -8,5 +8,8 @@
     <file>chicken-normal.png</file>
     <file>chicken-texture.png</file>
     <file>chicken.ply</file>
+
+    <file>arrow-texture.png</file>
+    <file>arrow.ply</file>
 </qresource>
 </RCC>

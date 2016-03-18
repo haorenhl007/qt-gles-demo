@@ -218,6 +218,13 @@ void main() {
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="checkDrawNormals">
+            <property name="text">
+             <string>Draw normals</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

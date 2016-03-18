@@ -18,6 +18,7 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_enableFaceCulling(true),
         m_enableDepthTesting(true),
         m_enableFacetedRender(false),
+        m_enableDrawingNormals(false),
         m_modelChanged(false),
         m_modelBuffer(0),
         m_modelVertexCount(0),
@@ -25,6 +26,9 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_gridBuffer(0),
         m_gridVertexCount(0),
         m_gridTexture_p(nullptr),
+        m_arrowBuffer(0),
+        m_arrowVertexCount(0),
+        m_arrowTexture_p(nullptr),
         m_program_p(nullptr),
         m_ornamentProgram_p(nullptr),
         m_shadersChanged(false)
@@ -96,6 +100,13 @@ void GlWidget::enableFacetedRender(bool enable)
 }
 
 //=============================================================================
+void GlWidget::enableDrawingNormals(bool enable)
+{
+    m_enableDrawingNormals = enable;
+    update();
+}
+
+//=============================================================================
 void GlWidget::mousePressEvent(QMouseEvent *event_p)
 {
     if(event_p->button() == Qt::LeftButton) {
@@ -132,22 +143,7 @@ void GlWidget::initializeGL()
     if(m_shadersChanged) buildShaders();
     buildOrnamentShaders();
 
-    {
-        GLfloat *data_p = makeGrid(10, 10, &m_gridVertexCount);
-        glDeleteBuffers(1, &m_gridBuffer);
-        glGenBuffers(1, &m_gridBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, m_gridBuffer);
-        glBufferData(GL_ARRAY_BUFFER,
-                (m_gridVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        delete data_p;
-
-        delete m_gridTexture_p;
-        m_gridTexture_p = new QOpenGLTexture(
-                QImage(":/grid-texture.png").mirrored());
-        m_gridTexture_p->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-        m_gridTexture_p->setMagnificationFilter(QOpenGLTexture::Linear);
-    }
+    loadOrnaments();
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
@@ -172,6 +168,7 @@ void GlWidget::paintGL()
     if(m_shadersChanged) buildShaders();
     if(m_modelChanged) loadModel();
 
+    glDepthMask(GL_TRUE);
     if(m_enableDepthTesting) {
         glEnable(GL_DEPTH_TEST);
     } else {
@@ -248,6 +245,7 @@ void GlWidget::paintGL()
         m_program_p->release();
     }
 
+    glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
 
     if(m_ornamentProgram_p) {
@@ -294,6 +292,8 @@ void GlWidget::paintGL()
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+        if(m_enableDrawingNormals) drawNormals();
+
         m_ornamentProgram_p->release();
     }
 }
@@ -312,11 +312,15 @@ void GlWidget::cleanup()
     m_modelBuffer = 0;
     glDeleteBuffers(1, &m_gridBuffer);
     m_gridBuffer = 0;
+    glDeleteBuffers(1, &m_arrowBuffer);
+    m_arrowBuffer = 0;
 
     delete m_texture_p;
     m_texture_p = nullptr;
     delete m_gridTexture_p;
     m_gridTexture_p = nullptr;
+    delete m_arrowTexture_p;
+    m_arrowTexture_p = nullptr;
 
     doneCurrent();
 }
@@ -421,13 +425,13 @@ void GlWidget::loadModel()
     // ==== Load model data ====
     QFile file(m_modelPath);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        notify(QString("Could not open file \"%1\"").arg(m_modelPath));
+        emit notify(QString("Could not open file \"%1\"").arg(m_modelPath));
         return;
     }
     QTextStream stream(&file);
     PlyModel ply = PlyModel::parse(stream);
     if(!ply.isValid()) {
-        notify(QString("Invalid PLY file \"%1\"").arg(m_modelPath));
+        emit notify(QString("Invalid PLY file \"%1\"").arg(m_modelPath));
         return;
     }
     GLfloat *data_p = convertPly(ply, &m_modelVertexCount);
@@ -439,6 +443,8 @@ void GlWidget::loadModel()
             (m_modelVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    loadNormals(data_p, m_modelVertexCount);
+
     delete[] data_p;
 
     // ==== Load texture ====
@@ -449,4 +455,117 @@ void GlWidget::loadModel()
     m_texture_p = new QOpenGLTexture(QImage(texturePath).mirrored());
 
     // TODO: ==== Load normal map ====
+}
+
+//=============================================================================
+void GlWidget::loadOrnaments()
+{
+    // ==== Grid ====
+    {
+        GLfloat *data_p = makeGrid(10, 10, &m_gridVertexCount);
+        glDeleteBuffers(1, &m_gridBuffer);
+        glGenBuffers(1, &m_gridBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, m_gridBuffer);
+        glBufferData(GL_ARRAY_BUFFER,
+                (m_gridVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        delete data_p;
+
+        delete m_gridTexture_p;
+        m_gridTexture_p = new QOpenGLTexture(
+                QImage(":/grid-texture.png").mirrored());
+        m_gridTexture_p->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+        m_gridTexture_p->setMagnificationFilter(QOpenGLTexture::Linear);
+    }
+
+    // ==== Arrow ====
+    {
+        QFile file(":/arrow.ply");
+        if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+        QTextStream stream(&file);
+        PlyModel ply = PlyModel::parse(stream);
+        if(!ply.isValid()) return;
+        GLfloat *data_p = convertPly(ply, &m_arrowVertexCount);
+
+        glDeleteBuffers(1, &m_arrowBuffer);
+        glGenBuffers(1, &m_arrowBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, m_arrowBuffer);
+        glBufferData(GL_ARRAY_BUFFER,
+                (m_arrowVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        delete[] data_p;
+
+        delete m_arrowTexture_p;
+        QImage image(":/arrow-texture.png");
+        m_arrowTexture_p = new QOpenGLTexture(image.mirrored());
+
+    }
+}
+
+//=============================================================================
+void GlWidget::loadNormals(GLfloat *data_p, int vertexCount)
+{
+    for(int i = 0; i < vertexCount; ++i) {
+        auto v = data_p + (i * NUM_VERTEX_VALUES);
+        QVector3D position(v[0], v[1], v[2]);
+
+        const QVector3D up(0.0f, 0.0f, 1.0f);
+
+        QVector3D smoothNormal(v[3], v[4], v[5]);
+        QMatrix4x4 smoothTransform;
+        smoothTransform.translate(position);
+        smoothTransform.rotate(QQuaternion::rotationTo(up, smoothNormal));
+        m_smoothArrows.append(smoothTransform);
+
+        QVector3D facetedNormal(v[6], v[7], v[8]);
+        QMatrix4x4 facetedTransform;
+        facetedTransform.translate(position);
+        facetedTransform.rotate(QQuaternion::rotationTo(up, facetedNormal));
+        m_facetedArrows.append(facetedTransform);
+    }
+}
+
+//=============================================================================
+void GlWidget::drawNormals()
+{
+    glBindBuffer(GL_ARRAY_BUFFER, m_arrowBuffer);
+
+    if(m_ornamentVars.aPosition >= 0) {
+        const intptr_t offset = POSITION_OFFSET;
+        glVertexAttribPointer(m_ornamentVars.aPosition,
+                3, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
+        glEnableVertexAttribArray(m_ornamentVars.aPosition);
+    }
+
+    if(m_ornamentVars.aTextureCoord >= 0) {
+        const intptr_t offset = TEXTURE_COORD_OFFSET;
+        glVertexAttribPointer(m_ornamentVars.aTextureCoord,
+                2, GL_FLOAT, GL_FALSE, STRIDE, (void *)offset);
+        glEnableVertexAttribArray(m_ornamentVars.aTextureCoord);
+    }
+
+    if(m_arrowTexture_p && m_ornamentVars.uTexture >= 0) {
+        constexpr int textureUnit = 0;
+        m_arrowTexture_p->bind(textureUnit);
+        glUniform1i(m_ornamentVars.uTexture, textureUnit);
+    }
+
+    const auto& arrowTransforms =
+            m_enableFacetedRender ? m_facetedArrows : m_smoothArrows;
+    for(auto transform : arrowTransforms) {
+        m_ornamentProgram_p->setUniformValue(
+                m_ornamentVars.uModel, m_modelMatrix * transform);
+        glDrawArrays(GL_TRIANGLES, 0, m_arrowVertexCount);
+    }
+
+    if(m_ornamentVars.aTextureCoord >= 0) {
+        glDisableVertexAttribArray(m_ornamentVars.aTextureCoord);
+    }
+
+    if(m_ornamentVars.aPosition >= 0) {
+        glDisableVertexAttribArray(m_ornamentVars.aPosition);
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

@@ -37,6 +37,7 @@ public slots:
     void enableFaceCulling(bool enable);
     void enableDepthTesting(bool enable);
     void enableFacetedRender(bool enable);
+    void enableDrawingNormals(bool enable);
 
 protected:
     void mousePressEvent(QMouseEvent *event_p) override;
@@ -68,6 +69,9 @@ private:
     void buildShaders();
     void buildOrnamentShaders();
     void loadModel();
+    void loadOrnaments();
+    void loadNormals(GLfloat *data_p, int vertexCount);
+    void drawNormals();
 
     bool m_mouseActive;
     QPoint m_lastMouse;
@@ -85,6 +89,7 @@ private:
     bool m_enableFaceCulling;
     bool m_enableDepthTesting;
     bool m_enableFacetedRender;
+    bool m_enableDrawingNormals;
 
     QString m_modelPath;
     bool m_modelChanged;
@@ -95,6 +100,13 @@ private:
     GLuint m_gridBuffer;
     int m_gridVertexCount;
     QOpenGLTexture *m_gridTexture_p;
+
+    GLuint m_arrowBuffer;
+    int m_arrowVertexCount;
+    QOpenGLTexture *m_arrowTexture_p;
+
+    QList<QMatrix4x4> m_smoothArrows;
+    QList<QMatrix4x4> m_facetedArrows;
 
     QOpenGLShaderProgram *m_program_p;
     ShaderVars m_vars;
