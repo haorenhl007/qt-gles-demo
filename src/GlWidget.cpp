@@ -11,6 +11,7 @@
 //=============================================================================
 GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_mouseActive(false),
+        m_cameraDistance(20.0),
         m_cameraAngleX(15.0),
         m_cameraAngleZ(-45.0),
         m_aspectRatio(1.0),
@@ -131,6 +132,14 @@ void GlWidget::mouseMoveEvent(QMouseEvent *event_p)
 void GlWidget::mouseReleaseEvent(QMouseEvent *)
 {
     m_mouseActive = false;
+}
+
+//=============================================================================
+void GlWidget::wheelEvent(QWheelEvent *event_p)
+{
+    const double degrees = (event_p->angleDelta().y() / 15);
+    m_cameraDistance -= 0.25 * degrees;
+    updateViewMatrix();
 }
 
 //=============================================================================
@@ -330,7 +339,7 @@ void GlWidget::updateViewMatrix()
 {
     m_viewMatrix = QMatrix4x4();
     m_viewMatrix.rotate(-90.0f, 1.0f, 0.0f, 0.0f);
-    m_viewMatrix.translate(0.0f, 20.0f, 0.0f);
+    m_viewMatrix.translate(0.0f, m_cameraDistance, 0.0f);
     m_viewMatrix.rotate(m_cameraAngleX, 1.0f, 0.0f, 0.0f);
     m_viewMatrix.rotate(m_cameraAngleZ, 0.0f, 0.0f, 1.0f);
     m_viewMatrix.translate(0.0f, 0.0f, -6.0f);

@@ -43,6 +43,7 @@ protected:
     void mousePressEvent(QMouseEvent *event_p) override;
     void mouseMoveEvent(QMouseEvent *event_p) override;
     void mouseReleaseEvent(QMouseEvent *event_p) override;
+    void wheelEvent(QWheelEvent *event_p) override;
 
     void initializeGL() override;
     void resizeGL(int w, int h) override;
@@ -78,6 +79,7 @@ private:
 
     QMatrix4x4 m_modelMatrix;
 
+    double m_cameraDistance;
     double m_cameraAngleX;
     double m_cameraAngleZ;
     QMatrix4x4 m_viewMatrix;
