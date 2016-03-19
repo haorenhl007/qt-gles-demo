@@ -22,13 +22,12 @@ public:
     GlWidget(QWidget *parent_p = nullptr);
     ~GlWidget() override;
 
-    void setModel(const QString& modelPath);
-    void setModelAngle(int degrees);
-
-    void setProjection(Projection p);
-
     void installShaders(const QString& vertexSource,
             const QString& fragmentSource);
+
+    void setModel(const QString& modelPath);
+    void setModelAngle(int degrees);
+    void setProjection(Projection p);
 
 signals:
     void notify(const QString& text);
@@ -37,7 +36,7 @@ public slots:
     void enableFaceCulling(bool enable);
     void enableDepthTesting(bool enable);
     void enableFacetedRender(bool enable);
-    void enableDrawingNormals(bool enable);
+    void enableVisibleNormals(bool enable);
 
 protected:
     void mousePressEvent(QMouseEvent *event_p) override;
@@ -53,6 +52,58 @@ private slots:
     void cleanup();
 
 private:
+    void updateViewMatrix();
+    void updateProjectionMatrix();
+    void buildShaders();
+    void buildOrnamentShaders();
+    void loadModel();
+    void loadOrnaments();
+    void loadNormals(GLfloat *data_p, int vertexCount);
+    void drawNormals();
+
+    // ==== Misc. Options ====
+    bool m_enableFaceCulling;
+    bool m_enableDepthTesting;
+    bool m_enableFacetedRender;
+    bool m_enableVisibleNormals;
+
+    // ==== View Matrix ====
+    bool m_mouseActive;
+    QPoint m_lastMouse;
+
+    double m_cameraDistance;
+    double m_cameraAngleX;
+    double m_cameraAngleZ;
+    QMatrix4x4 m_viewMatrix;
+
+    // ==== Projection Matrix ====
+    double m_aspectRatio;
+    Projection m_projection;
+    QMatrix4x4 m_projectionMatrix;
+
+    // ==== Model ====
+    QString m_modelPath;
+    bool m_modelChanged;
+    GLuint m_modelBuffer;
+    int m_modelVertexCount;
+    QOpenGLTexture *m_texture_p;
+
+    QMatrix4x4 m_modelMatrix;
+
+    // ==== Grid ====
+    GLuint m_gridBuffer;
+    int m_gridVertexCount;
+    QOpenGLTexture *m_gridTexture_p;
+
+    // ==== Arrows ====
+    GLuint m_arrowBuffer;
+    int m_arrowVertexCount;
+    QOpenGLTexture *m_arrowTexture_p;
+
+    QList<QMatrix4x4> m_smoothArrows;
+    QList<QMatrix4x4> m_facetedArrows;
+
+    // ==== Shaders ====
     struct ShaderVars {
         int uModel = -1;
         int uView = -1;
@@ -64,51 +115,6 @@ private:
         int aNormal = -1;
         int aTextureCoord = -1;
     };
-
-    void updateViewMatrix();
-    void updateProjectionMatrix();
-    void buildShaders();
-    void buildOrnamentShaders();
-    void loadModel();
-    void loadOrnaments();
-    void loadNormals(GLfloat *data_p, int vertexCount);
-    void drawNormals();
-
-    bool m_mouseActive;
-    QPoint m_lastMouse;
-
-    QMatrix4x4 m_modelMatrix;
-
-    double m_cameraDistance;
-    double m_cameraAngleX;
-    double m_cameraAngleZ;
-    QMatrix4x4 m_viewMatrix;
-
-    double m_aspectRatio;
-    Projection m_projection;
-    QMatrix4x4 m_projectionMatrix;
-
-    bool m_enableFaceCulling;
-    bool m_enableDepthTesting;
-    bool m_enableFacetedRender;
-    bool m_enableDrawingNormals;
-
-    QString m_modelPath;
-    bool m_modelChanged;
-    GLuint m_modelBuffer;
-    int m_modelVertexCount;
-    QOpenGLTexture *m_texture_p;
-
-    GLuint m_gridBuffer;
-    int m_gridVertexCount;
-    QOpenGLTexture *m_gridTexture_p;
-
-    GLuint m_arrowBuffer;
-    int m_arrowVertexCount;
-    QOpenGLTexture *m_arrowTexture_p;
-
-    QList<QMatrix4x4> m_smoothArrows;
-    QList<QMatrix4x4> m_facetedArrows;
 
     QOpenGLShaderProgram *m_program_p;
     ShaderVars m_vars;

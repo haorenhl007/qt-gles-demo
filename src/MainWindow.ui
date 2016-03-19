@@ -219,9 +219,9 @@ void main() {
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="checkDrawNormals">
+           <widget class="QCheckBox" name="checkShowNormals">
             <property name="text">
-             <string>Draw normals</string>
+             <string>Show normals</string>
             </property>
            </widget>
           </item>

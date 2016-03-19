@@ -10,16 +10,16 @@
 
 //=============================================================================
 GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
+        m_enableFaceCulling(true),
+        m_enableDepthTesting(true),
+        m_enableFacetedRender(false),
+        m_enableVisibleNormals(false),
         m_mouseActive(false),
         m_cameraDistance(20.0),
         m_cameraAngleX(15.0),
         m_cameraAngleZ(-45.0),
         m_aspectRatio(1.0),
         m_projection(Projection::PERSPECTIVE),
-        m_enableFaceCulling(true),
-        m_enableDepthTesting(true),
-        m_enableFacetedRender(false),
-        m_enableDrawingNormals(false),
         m_modelChanged(false),
         m_modelBuffer(0),
         m_modelVertexCount(0),
@@ -34,15 +34,24 @@ GlWidget::GlWidget(QWidget *parent_p) : QOpenGLWidget(parent_p),
         m_ornamentProgram_p(nullptr),
         m_shadersChanged(false)
 {
-    QSurfaceFormat f = format();
-    f.setDepthBufferSize(24);
-    setFormat(f);
+    updateViewMatrix();
 }
 
 //=============================================================================
 GlWidget::~GlWidget()
 {
     cleanup();
+}
+
+//=============================================================================
+void GlWidget::installShaders(const QString& vertexSource,
+        const QString& fragmentSource)
+{
+    emit notify("Building shader program...");
+    m_vertexSource = vertexSource;
+    m_fragmentSource = fragmentSource;
+    m_shadersChanged = true;
+    update();
 }
 
 //=============================================================================
@@ -69,17 +78,6 @@ void GlWidget::setProjection(Projection p)
 }
 
 //=============================================================================
-void GlWidget::installShaders(const QString& vertexSource,
-        const QString& fragmentSource)
-{
-    emit notify("Building shader program...");
-    m_vertexSource = vertexSource;
-    m_fragmentSource = fragmentSource;
-    m_shadersChanged = true;
-    update();
-}
-
-//=============================================================================
 void GlWidget::enableFaceCulling(bool enable)
 {
     m_enableFaceCulling = enable;
@@ -101,9 +99,9 @@ void GlWidget::enableFacetedRender(bool enable)
 }
 
 //=============================================================================
-void GlWidget::enableDrawingNormals(bool enable)
+void GlWidget::enableVisibleNormals(bool enable)
 {
-    m_enableDrawingNormals = enable;
+    m_enableVisibleNormals = enable;
     update();
 }
 
@@ -155,19 +153,14 @@ void GlWidget::initializeGL()
     loadOrnaments();
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    updateViewMatrix();
 }
 
 //=============================================================================
 void GlWidget::resizeGL(int w, int h)
 {
-    if(h > 0) {
-        m_aspectRatio = w / (double)h;
-    }
+    if(h > 0) m_aspectRatio = w / (double)h;
     updateProjectionMatrix();
 }
 
@@ -301,7 +294,7 @@ void GlWidget::paintGL()
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        if(m_enableDrawingNormals) drawNormals();
+        if(m_enableVisibleNormals) drawNormals();
 
         m_ornamentProgram_p->release();
     }
