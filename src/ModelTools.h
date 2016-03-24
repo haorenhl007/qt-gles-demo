@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QOpenGLFunctions>
+#include <QVector>
 
 #include "Ply/PlyModel.h"
 
@@ -11,5 +12,5 @@ constexpr intptr_t NORMAL_OFFSET = 3 * sizeof(GLfloat);
 constexpr intptr_t FACE_NORMAL_OFFSET = 6 * sizeof(GLfloat);
 constexpr intptr_t TEXTURE_COORD_OFFSET = 9 * sizeof(GLfloat);
 
-GLfloat *makeGrid(int w, int h, int *vertexCountOut);
-GLfloat *convertPly(PlyModel model, int *vertexCountOut);
+QVector<GLfloat> makeGrid(int w, int h);
+QVector<GLfloat> convertPly(PlyModel model);

@@ -436,18 +436,17 @@ void GlWidget::loadModel()
         emit notify(QString("Invalid PLY file \"%1\"").arg(m_modelPath));
         return;
     }
-    GLfloat *data_p = convertPly(ply, &m_modelVertexCount);
+    QVector<GLfloat> data = convertPly(ply);
+    m_modelVertexCount = data.count() / NUM_VERTEX_VALUES;
 
     glDeleteBuffers(1, &m_modelBuffer);
     glGenBuffers(1, &m_modelBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_modelBuffer);
     glBufferData(GL_ARRAY_BUFFER,
-            (m_modelVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
+            (data.count() * sizeof(GLfloat)), data.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    loadNormals(data_p, m_modelVertexCount);
-
-    delete[] data_p;
+    loadNormals(data.data(), m_modelVertexCount);
 
     // ==== Load texture ====
     QString texturePath = m_modelPath;
@@ -464,14 +463,15 @@ void GlWidget::loadOrnaments()
 {
     // ==== Grid ====
     {
-        GLfloat *data_p = makeGrid(10, 10, &m_gridVertexCount);
+        QVector<GLfloat> data = makeGrid(10, 10);
+        m_gridVertexCount = data.count() / NUM_VERTEX_VALUES;
+
         glDeleteBuffers(1, &m_gridBuffer);
         glGenBuffers(1, &m_gridBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, m_gridBuffer);
         glBufferData(GL_ARRAY_BUFFER,
-                (m_gridVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
+                (data.count() * sizeof(GLfloat)), data.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        delete data_p;
 
         delete m_gridTexture_p;
         m_gridTexture_p = new QOpenGLTexture(
@@ -487,16 +487,15 @@ void GlWidget::loadOrnaments()
         QTextStream stream(&file);
         PlyModel ply = PlyModel::parse(stream);
         if(!ply.isValid()) return;
-        GLfloat *data_p = convertPly(ply, &m_arrowVertexCount);
+        QVector<GLfloat> data = convertPly(ply);
+        m_arrowVertexCount = data.count() / NUM_VERTEX_VALUES;
 
         glDeleteBuffers(1, &m_arrowBuffer);
         glGenBuffers(1, &m_arrowBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, m_arrowBuffer);
         glBufferData(GL_ARRAY_BUFFER,
-                (m_arrowVertexCount * STRIDE), data_p, GL_STATIC_DRAW);
+                (data.count() * sizeof(GLfloat)), data.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        delete[] data_p;
 
         delete m_arrowTexture_p;
         QImage image(":/arrow-texture.png");

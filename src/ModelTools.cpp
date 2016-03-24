@@ -6,7 +6,7 @@
 #include <QVector3D>
 
 //=============================================================================
-GLfloat *makeGrid(int w, int h, int *vertexCountOut)
+QVector<GLfloat> makeGrid(int w, int h)
 {
     struct Point
     {
@@ -31,34 +31,29 @@ GLfloat *makeGrid(int w, int h, int *vertexCountOut)
         { 1.0, 1.0 }
     };
 
-    const int cellCount = w * h;
-    const int vertexCount = cellCount * 6;
-    auto data_p = new GLfloat[NUM_VERTEX_VALUES * vertexCount];
-    GLfloat *vertex_p = data_p;
+    QVector<GLfloat> data;
     for(int y = -h/2; y < h/2; ++y) {
         for(int x = -w/2; x < w/2; ++x) {
             for(int i = 0; i < 6; ++i) {
-                vertex_p[0] = 2*x + 2*vertexOffsets[i].x; // x
-                vertex_p[1] = 2*y + 2*vertexOffsets[i].y; // y
-                vertex_p[2] = 0.0f; // z
-                vertex_p[3] = 0.0f; // nx
-                vertex_p[4] = 0.0f; // ny
-                vertex_p[5] = 1.0f; // nz
-                vertex_p[6] = 0.0f; // fnx
-                vertex_p[7] = 0.0f; // fny
-                vertex_p[8] = 1.0f; // fnz
-                vertex_p[9] = textureCoords[i].x; // s
-                vertex_p[10] = textureCoords[i].y; // t
-                vertex_p += NUM_VERTEX_VALUES;
+                data.append(2*x + 2*vertexOffsets[i].x); // x
+                data.append(2*y + 2*vertexOffsets[i].y); // y
+                data.append(0.0f); // z
+                data.append(0.0f); // nx
+                data.append(0.0f); // ny
+                data.append(1.0f); // nz
+                data.append(0.0f); // fnx
+                data.append(0.0f); // fny
+                data.append(1.0f); // fnz
+                data.append(textureCoords[i].x); // s
+                data.append(textureCoords[i].y); // t
             }
         }
     }
-    if(vertexCountOut) *vertexCountOut = vertexCount;
-    return data_p;
+    return data;
 }
 
 //=============================================================================
-GLfloat *convertPly(PlyModel model, int *vertexCountOut)
+QVector<GLfloat> convertPly(PlyModel model)
 {
     struct Vertex
     {
@@ -73,21 +68,21 @@ GLfloat *convertPly(PlyModel model, int *vertexCountOut)
     };
 
     QSet<QString> elements = model.elements();
-    if(!elements.contains("vertex")) return nullptr;
-    if(!elements.contains("face")) return nullptr;
+    if(!elements.contains("vertex")) return QVector<GLfloat>();
+    if(!elements.contains("face")) return QVector<GLfloat>();
 
     QSet<QString> vertexProperties = model.scalarProperties("vertex");
-    if(!vertexProperties.contains("x")) return nullptr;
-    if(!vertexProperties.contains("y")) return nullptr;
-    if(!vertexProperties.contains("z")) return nullptr;
-    if(!vertexProperties.contains("nx")) return nullptr;
-    if(!vertexProperties.contains("ny")) return nullptr;
-    if(!vertexProperties.contains("nz")) return nullptr;
-    if(!vertexProperties.contains("s")) return nullptr;
-    if(!vertexProperties.contains("t")) return nullptr;
+    if(!vertexProperties.contains("x")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("y")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("z")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("nx")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("ny")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("nz")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("s")) return QVector<GLfloat>();
+    if(!vertexProperties.contains("t")) return QVector<GLfloat>();
 
     QSet<QString> faceProperties = model.listProperties("face");
-    if(!faceProperties.contains("vertex_indices")) return nullptr;
+    if(!faceProperties.contains("vertex_indices")) return QVector<GLfloat>();
 
     QList<Vertex> verts;
     const int vertexCount = model.count("vertex");
@@ -104,11 +99,11 @@ GLfloat *convertPly(PlyModel model, int *vertexCountOut)
         verts.append(vert);
     }
 
-    QList<double> face_verts;
+    QVector<GLfloat> face_verts;
     const int faceCount = model.count("face");
     for(int f = 0; f < faceCount; ++f) {
         QList<double> indices = model.listValue("face", f, "vertex_indices");
-        if(indices.count() != 3) return nullptr;
+        if(indices.count() != 3) return QVector<GLfloat>();
 
         QVector3D faceNormal;
         {
@@ -123,7 +118,7 @@ GLfloat *convertPly(PlyModel model, int *vertexCountOut)
 
         for(int i = 0; i < indices.count(); ++i) {
             int v = (int)indices.value(i);
-            if(v >= verts.count()) return nullptr;
+            if(v >= verts.count()) return QVector<GLfloat>();
             Vertex vert = verts.value(v);
             face_verts.append(vert.x);
             face_verts.append(vert.y);
@@ -139,12 +134,5 @@ GLfloat *convertPly(PlyModel model, int *vertexCountOut)
         }
     }
 
-    GLfloat *data_p = new GLfloat[face_verts.count()];
-    for(int i = 0; i < face_verts.count(); ++i) {
-        data_p[i] = face_verts.value(i);
-    }
-    if(vertexCountOut) {
-        *vertexCountOut = face_verts.count() / NUM_VERTEX_VALUES;
-    }
-    return data_p;
+    return face_verts;
 }
